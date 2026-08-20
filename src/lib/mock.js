@@ -11,6 +11,28 @@ export const MOCK_ON = import.meta.env.VITE_USE_MOCK === '1'
 
 const wait = (ms = 220) => new Promise((r) => setTimeout(r, ms))
 
+/**
+ * Mock session. Held in sessionStorage so a page reload behaves like the real
+ * httpOnly refresh cookie does — you stay signed in across reloads, but a
+ * fresh tab starts signed out. Without this, /refresh always succeeded and the
+ * app auto-authenticated on every load, which made /login unreachable.
+ */
+const SESSION_KEY = 'easycode.mock.session'
+const readSession = () => {
+  try { return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null') } catch { return null }
+}
+const writeSession = (user) => {
+  try { sessionStorage.setItem(SESSION_KEY, JSON.stringify(user)) } catch { /* private mode */ }
+  return user
+}
+const clearSession = () => {
+  try { sessionStorage.removeItem(SESSION_KEY) } catch { /* private mode */ }
+}
+
+class MockUnauthorized extends Error {
+  constructor() { super('No mock session. Sign in at /login.'); this.status = 401; this.code = 'UNAUTHORIZED' }
+}
+
 const CLIENT_USER = {
   id: 'u-marcus', name: 'Marcus Terrell', email: 'marcus@hsk.com',
   role: 'CLIENT', orgId: 'org-hsk', orgName: 'Harlem Soul Kitchen', roleTitle: 'Owner',
@@ -174,17 +196,27 @@ const routes = [
 
   [/^\/v1\/auth\/login$/, (_m, opts) => {
     const email = (opts.body?.email || '').toLowerCase()
+    if (!email) throw Object.assign(new Error('Enter your email.'), { status: 400, code: 'VALIDATION_FAILED' })
     const user = email.includes('easycode.dev') ? ADMIN_USER : CLIENT_USER
+    writeSession(user)
     return { accessToken: 'mock.' + user.id, expiresIn: 900, user }
   }],
-  [/^\/v1\/auth\/refresh$/, () => ({ accessToken: 'mock.refreshed', expiresIn: 900, user: CLIENT_USER })],
-  [/^\/v1\/auth\/logout$/, () => null],
-  [/^\/v1\/auth\/me$/, () => ({ user: CLIENT_USER, org: PORTAL_HOME.org })],
+  [/^\/v1\/auth\/refresh$/, () => {
+    const user = readSession()
+    if (!user) throw new MockUnauthorized()
+    return { accessToken: 'mock.refreshed', expiresIn: 900, user }
+  }],
+  [/^\/v1\/auth\/logout$/, () => { clearSession(); return null }],
+  [/^\/v1\/auth\/me$/, () => {
+    const user = readSession()
+    if (!user) throw new MockUnauthorized()
+    return { user, org: user.orgId ? PORTAL_HOME.org : null }
+  }],
   [/^\/v1\/auth\/invites\/([^/]+)$/, () => ({
     email: 'denise@chrealty.com', orgName: 'Crown Heights Realty',
     invitedBy: 'Charles', role: 'CLIENT', expiresAt: future(7),
   })],
-  [/^\/v1\/auth\/invites\/accept$/, () => ({ accessToken: 'mock.invited', user: CLIENT_USER })],
+  [/^\/v1\/auth\/invites\/accept$/, () => ({ accessToken: 'mock.invited', user: writeSession(CLIENT_USER) })],
   [/^\/v1\/auth\/password\/forgot$/, () => null],
   [/^\/v1\/auth\/password\/reset$/, () => null],
 
