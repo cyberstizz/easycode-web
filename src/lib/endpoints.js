@@ -1,0 +1,140 @@
+/**
+ * THE SEAM.
+ *
+ * Every path this frontend knows about lives here and nowhere else.
+ * No component, page, or hook should ever contain a URL string.
+ *
+ * These paths were read off the actual easycode-api repo (README + API_EXAMPLES.md),
+ * NOT off the original frozen contract — the two diverged. When the backend moves a
+ * path or renames a field, you fix it here and the app keeps working.
+ *
+ * Backend conventions confirmed from the repo:
+ *   - JSON is camelCase (dealTier, amountCents, accessToken)
+ *   - Access token in `Authorization: Bearer`
+ *   - Refresh token is an httpOnly rotating cookie -> requests need credentials:'include'
+ *   - Deal tiers: STANDARD | PREFERRED | FLOOR | SPECIAL
+ *       STANDARD  = $600 down (50% of $1,200), $50/mo optional
+ *       PREFERRED = $200 down + $50/mo, 24-month contract
+ *       FLOOR     = $100 down + $50/mo, 24-month contract   (owner-only)
+ *       SPECIAL   = comp / favor / referral trade            (owner-only)
+ */
+
+export const EP = {
+  // ── public ────────────────────────────────────────────────
+  health: () => '/v1/public/health',
+  contact: () => '/v1/public/contact',
+
+  // ── auth ──────────────────────────────────────────────────
+  login: () => '/v1/auth/login',
+  refresh: () => '/v1/auth/refresh',
+  logout: () => '/v1/auth/logout',
+  me: () => '/v1/auth/me',
+  inviteLookup: (token) => `/v1/auth/invites/${encodeURIComponent(token)}`,
+  inviteAccept: () => '/v1/auth/invites/accept',
+  passwordForgot: () => '/v1/auth/password/forgot',
+  passwordReset: () => '/v1/auth/password/reset',
+
+  // ── client portal ─────────────────────────────────────────
+  portalHome: () => '/v1/portal/home',
+
+  projects: () => '/v1/projects',
+  project: (id) => `/v1/projects/${id}`,
+
+  requests: () => '/v1/requests',
+  request: (id) => `/v1/requests/${id}`,
+  requestMessages: (id) => `/v1/requests/${id}/messages`,
+  requestRead: (id) => `/v1/requests/${id}/read`,
+  requestChangeOrders: (id) => `/v1/requests/${id}/change-orders`,
+  changeOrderApprove: (id) => `/v1/change-orders/${id}/approve`,
+  changeOrderDecline: (id) => `/v1/change-orders/${id}/decline`,
+
+  assetPresign: () => '/v1/assets/presign',
+  assetComplete: (id) => `/v1/assets/${id}/complete`,
+  assetUrl: (id) => `/v1/assets/${id}/url`,
+
+  billingSummary: () => '/v1/billing/summary',
+  invoice: (id) => `/v1/invoices/${id}`,
+  invoicePaymentIntent: (id) => `/v1/invoices/${id}/payment-intent`,
+  setupIntent: () => '/v1/billing/setup-intent',
+  subscriptions: () => '/v1/subscriptions',
+
+  // ── admin ─────────────────────────────────────────────────
+  adminDashboard: () => '/v1/admin/dashboard',
+
+  adminOrgs: () => '/v1/admin/organizations',
+  adminOrg: (id) => `/v1/admin/organizations/${id}`,
+  adminOrgContacts: (orgId) => `/v1/admin/organizations/${orgId}/contacts`,
+  adminContactInvite: (contactId) =>
+    `/v1/admin/organizations/contacts/${contactId}/invite`,
+
+  adminProjects: () => '/v1/admin/projects',
+  adminProjectStage: (projectId, stageKey) =>
+    `/v1/admin/projects/${projectId}/stages/${stageKey}`,
+  adminProjectAdvance: (projectId) => `/v1/admin/projects/${projectId}/advance`,
+
+  adminInvoices: () => '/v1/admin/invoices',
+  adminInvoiceSend: (id) => `/v1/admin/invoices/${id}/send`,
+  adminInvoiceVoid: (id) => `/v1/admin/invoices/${id}/void`,
+
+  adminLeadsBoard: () => '/v1/admin/leads/board',
+  adminLeadsDue: () => '/v1/admin/leads/due',
+  adminLead: (id) => `/v1/admin/leads/${id}`,
+  adminLeadActivities: (id) => `/v1/admin/leads/${id}/activities`,
+  adminLeadConvert: (id) => `/v1/admin/leads/${id}/convert`,
+}
+
+/** Ordered stage keys. The backend's StageKey enum — do not reorder. */
+export const STAGES = [
+  'DISCOVERY',
+  'DESIGN',
+  'DEVELOPMENT',
+  'REVIEW',
+  'LAUNCH',
+  'MAINTENANCE',
+]
+
+export const STAGE_META = {
+  DISCOVERY: { n: '01', label: 'Discovery', color: 'var(--violet)' },
+  DESIGN: { n: '02', label: 'Design', color: 'var(--blue)' },
+  DEVELOPMENT: { n: '03', label: 'Development', color: 'var(--cyan)' },
+  REVIEW: { n: '04', label: 'Review', color: 'var(--amber)' },
+  LAUNCH: { n: '05', label: 'Launch', color: 'var(--em)' },
+  MAINTENANCE: { n: '06', label: 'Maintenance', color: 'var(--teal)' },
+}
+
+export const DEAL_TIER = {
+  STANDARD: { label: 'Standard', down: 60000, monthly: 5000, months: 0 },
+  PREFERRED: { label: 'Preferred', down: 20000, monthly: 5000, months: 24 },
+  FLOOR: { label: 'Floor', down: 10000, monthly: 5000, months: 24, ownerOnly: true },
+  SPECIAL: { label: 'Special', down: 0, monthly: 0, months: 0, ownerOnly: true },
+}
+
+/** Request statuses, in queue order. */
+export const REQUEST_STATUS = {
+  NEW: { label: 'New', chip: 'c-new' },
+  ACKNOWLEDGED: { label: 'Seen', chip: 'c-done' },
+  IN_PROGRESS: { label: 'In progress', chip: 'c-prog' },
+  NEEDS_CLIENT: { label: 'Needs you', chip: 'c-you' },
+  DONE: { label: 'Done', chip: 'c-done' },
+  DECLINED: { label: 'Declined', chip: 'c-done' },
+}
+
+export const REQUEST_TYPE = {
+  UPDATE: { label: 'Update', chip: 'c-vio' },
+  QUESTION: { label: 'Question', chip: 'c-blu' },
+  NEW_PROJECT: { label: 'New project', chip: 'c-new' },
+  BUG: { label: 'Bug', chip: 'c-late' },
+}
+
+export const BILLING_DISPOSITION = {
+  UNSET: 'Not set',
+  INCLUDED: 'Included in plan',
+  BILLABLE: 'Billable',
+  DECLINED: 'Declined',
+}
+
+/** Roles. The backend bootstraps an ADMIN; CLIENT is the portal role. */
+export const ROLE = { CLIENT: 'CLIENT', AGENT: 'AGENT', PM: 'PM', ADMIN: 'ADMIN', OWNER: 'OWNER' }
+export const STAFF_ROLES = [ROLE.AGENT, ROLE.PM, ROLE.ADMIN, ROLE.OWNER]
+export const isStaff = (role) => STAFF_ROLES.includes(role)
+export const isOwner = (role) => role === ROLE.ADMIN || role === ROLE.OWNER
