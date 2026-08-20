@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './auth/AuthProvider'
 import ProtectedRoute from './auth/ProtectedRoute'
 import Shell from './components/Shell'
+import ErrorBoundary from './components/ErrorBoundary'
 import Placeholder from './pages/Placeholder'
 import NotFound from './pages/NotFound'
 
@@ -17,8 +18,9 @@ import RequestDetail from './pages/portal/RequestDetail'
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
+    <ErrorBoundary>
+      <BrowserRouter>
+        <AuthProvider>
         <Routes>
           {/* public */}
           <Route path="/" element={<Placeholder title="Marketing home" note="Batch 5 mockups port here next." />} />
@@ -68,7 +70,8 @@ export default function App() {
           <Route path="/app" element={<Navigate to="/portal" replace />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </AuthProvider>
-    </BrowserRouter>
+        </AuthProvider>
+      </BrowserRouter>
+    </ErrorBoundary>
   )
 }
