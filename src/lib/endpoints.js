@@ -76,6 +76,7 @@ export const EP = {
   adminInvoiceSend: (id) => `/v1/admin/invoices/${id}/send`,
   adminInvoiceVoid: (id) => `/v1/admin/invoices/${id}/void`,
 
+  adminLeads: () => '/v1/admin/leads',
   adminLeadsBoard: () => '/v1/admin/leads/board',
   adminLeadsDue: () => '/v1/admin/leads/due',
   adminLead: (id) => `/v1/admin/leads/${id}`,
@@ -138,3 +139,56 @@ export const ROLE = { CLIENT: 'CLIENT', AGENT: 'AGENT', PM: 'PM', ADMIN: 'ADMIN'
 export const STAFF_ROLES = [ROLE.AGENT, ROLE.PM, ROLE.ADMIN, ROLE.OWNER]
 export const isStaff = (role) => STAFF_ROLES.includes(role)
 export const isOwner = (role) => role === ROLE.ADMIN || role === ROLE.OWNER
+
+
+/** Pipeline columns, left to right. Matches the backend's LeadStatus enum. */
+export const LEAD_STATUS = [
+  { key: 'NEW',         label: 'New',         accent: 'var(--mute)' },
+  { key: 'CONTACTED',   label: 'Contacted',   accent: 'var(--mute)' },
+  { key: 'PITCHED',     label: 'Pitched',     accent: 'var(--cyan)' },
+  { key: 'NEGOTIATING', label: 'Negotiating', accent: 'var(--amber)' },
+  { key: 'WON',         label: 'Won',         accent: 'var(--em-hi)' },
+]
+
+export const LEAD_SOURCE = {
+  COLD_CALL:    { label: 'Cold call',    chip: 'c-blu' },
+  WEBSITE_FORM: { label: 'Inbound',      chip: 'c-new' },
+  REFERRAL:     { label: 'Referral',     chip: 'c-vio' },
+  WALK_IN:      { label: 'Walk-in',      chip: 'c-done' },
+  OTHER:        { label: 'Other',        chip: 'c-done' },
+}
+
+/** The five outcomes on the log-a-call screen, in tap order. */
+export const CALL_OUTCOME = [
+  { key: 'CONNECTED',      label: 'Connected',      good: true },
+  { key: 'VOICEMAIL',      label: 'Voicemail' },
+  { key: 'NO_ANSWER',      label: 'No answer' },
+  { key: 'BAD_NUMBER',     label: 'Bad number' },
+  { key: 'NOT_INTERESTED', label: 'Not interested' },
+]
+
+/**
+ * Tap-to-tag instead of free text. The whole point: after fifty calls these
+ * aggregate into "where deals die", which free-text notes never can.
+ */
+export const OBJECTION_TAGS = [
+  'Trust', 'Cash flow', 'Timing', 'Needs a partner', 'Happy as is', 'Price',
+]
+
+/** Offer ladder. FLOOR and SPECIAL are owner-only — the backend enforces it too. */
+export const RUNGS = [
+  { key: 'NONE',      label: 'Nothing yet', down: null,  monthly: null, months: 0 },
+  { key: 'STANDARD',  label: 'Standard',    down: 60000, monthly: 5000, months: 0,  note: '50% of $1,200, no contract' },
+  { key: 'PREFERRED', label: 'Preferred',   down: 20000, monthly: 5000, months: 24, note: '2-year contract, $50/mo' },
+  { key: 'FLOOR',     label: 'Floor',       down: 10000, monthly: 5000, months: 24, note: '2-year contract, $50/mo', ownerOnly: true },
+  { key: 'SPECIAL',   label: 'Special',     down: 0,     monthly: 0,    months: 0,  note: 'Favor or referral trade', ownerOnly: true },
+]
+
+export const rung = (key) => RUNGS.find((r) => r.key === key) || RUNGS[0]
+
+/** Two-year value of a deal. Preferred beats Standard — worth surfacing in the UI. */
+export const twoYearValueCents = (key) => {
+  const r = rung(key)
+  if (!r.down && !r.monthly) return 0
+  return r.months ? r.down + r.monthly * r.months : 120000
+}
