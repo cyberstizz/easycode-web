@@ -61,6 +61,11 @@ export const EP = {
   // ── admin ─────────────────────────────────────────────────
   adminDashboard: () => '/v1/admin/dashboard',
 
+  // Staff see the same /v1/requests collection the client does — the backend
+  // widens the result set by role rather than exposing a separate path.
+  adminRequests: () => '/v1/requests',
+  adminAsset: (id) => `/v1/assets/${id}`,
+
   adminOrgs: () => '/v1/admin/organizations',
   adminOrg: (id) => `/v1/admin/organizations/${id}`,
   adminOrgContacts: (orgId) => `/v1/admin/organizations/${orgId}/contacts`,
