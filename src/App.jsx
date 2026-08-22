@@ -11,6 +11,13 @@ import AcceptInvite from './pages/auth/AcceptInvite'
 import ForgotPassword from './pages/auth/ForgotPassword'
 import ResetPassword from './pages/auth/ResetPassword'
 
+import Today from './pages/admin/Today'
+import Pipeline from './pages/admin/Pipeline'
+import LeadDetail from './pages/admin/LeadDetail'
+import LogCall from './pages/admin/LogCall'
+import ConvertLead from './pages/admin/ConvertLead'
+import NewLead from './pages/admin/NewLead'
+
 import Overview from './pages/portal/Overview'
 import Project from './pages/portal/Project'
 import Requests from './pages/portal/Requests'
@@ -53,12 +60,14 @@ export default function App() {
 
           {/* admin console */}
           <Route path="/admin" element={<ProtectedRoute staff><Shell /></ProtectedRoute>}>
-            <Route index element={<Placeholder title="Today" />} />
+            <Route index element={<Today />} />
             <Route path="requests" element={<Placeholder title="Requests inbox" />} />
             <Route path="requests/:id" element={<Placeholder title="Request" />} />
-            <Route path="pipeline" element={<Placeholder title="Pipeline" />} />
-            <Route path="leads/:id" element={<Placeholder title="Lead" />} />
-            <Route path="leads/:id/convert" element={<Placeholder title="Convert lead" />} />
+            <Route path="pipeline" element={<Pipeline />} />
+            <Route path="leads/new" element={<NewLead />} />
+            <Route path="leads/:id" element={<LeadDetail />} />
+            <Route path="leads/:id/log" element={<LogCall />} />
+            <Route path="leads/:id/convert" element={<ConvertLead />} />
             <Route path="clients" element={<Placeholder title="Clients" />} />
             <Route path="clients/:id" element={<Placeholder title="Client" />} />
             <Route path="projects" element={<Placeholder title="Projects" />} />
