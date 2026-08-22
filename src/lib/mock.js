@@ -254,6 +254,63 @@ const LEAD_STATS = {
   dialsPerClose: 62,
 }
 
+
+// ── admin: orgs, projects, staff request queue ─────────────
+const ORGS = [
+  { id:'org-hsk', name:'Harlem Soul Kitchen', industry:'Restaurant', status:'ACTIVE',
+    dealTier:'PREFERRED', address:'2263 Frederick Douglass Blvd, New York NY',
+    monthlyCents:5000, downPaidCents:20000, contractMonths:24,
+    lifetimeCents:101000, outstandingCents:51000, hoursUsed:1.4, includedHours:2,
+    clientSince:iso(188),
+    notes:'Marcus decides fast but reads everything. Renee handles the money — send invoices to her, not him. Best reached before 11 AM; kitchen gets loud after.',
+    contacts:[
+      { id:'c-1', name:'Marcus Terrell', email:'marcus@hsk.com', phone:'(212) 555-0147', roleTitle:'Owner', isPrimary:true, isBilling:false, hasPortal:true },
+      { id:'c-2', name:'Renee Terrell', email:'renee@hsk.com', roleTitle:'Books', isPrimary:false, isBilling:true, hasPortal:true },
+      { id:'c-3', name:'Andre Wells', email:'andre@hsk.com', roleTitle:'Manager', isPrimary:false, isBilling:false, hasPortal:false, invitedAt:iso(9) },
+    ],
+    projects:[PROJECT, { id:'p-hsk2', name:'Second location microsite', projectType:'Restaurant website',
+      status:'NOT_STARTED', currentStage:'DISCOVERY', stages:[] }],
+    invoices: BILLING.invoices,
+    recentCalls:[
+      { id:'rc1', at:iso(13), outcome:'CONNECTED', durationSeconds:720, body:'Walked the dev preview. Loved the menu page.' },
+      { id:'rc2', at:iso(28), outcome:'VOICEMAIL', body:'Left message about the content deadline.' },
+    ] },
+]
+
+const ADMIN_REQUESTS = [
+  { id:'r-416', refNumber:'REQ-0416', type:'BUG', status:'NEW', billing:'UNSET',
+    title:"Listing photos aren't loading on mobile", orgId:'org-cr', orgName:'Crown Heights Realty',
+    createdByName:'Denise Whitaker', createdAt:iso(0,18), updatedAt:iso(0,18), unread:true, assigneeName:null,
+    messages:[{ id:'m1', authorName:'Denise Whitaker', internalOnly:false, createdAt:iso(0,18),
+      body:'Three of my listings show a blank box where the photo should be, but only on my phone. Desktop is fine.' }] },
+  { id:'r-415', refNumber:'REQ-0415', type:'UPDATE', status:'NEW', billing:'UNSET',
+    title:'Add a class schedule page', orgId:'org-bk', orgName:'BK Fitness Co.',
+    createdByName:'James Ruiz', createdAt:iso(0,5), updatedAt:iso(0,5), unread:true, assigneeName:null,
+    messages:[{ id:'m2', authorName:'James Ruiz', internalOnly:false, createdAt:iso(0,5),
+      body:'People keep DMing us for the schedule. Can we get a page that shows the week?' }] },
+  { id:'r-412', refNumber:'REQ-0412', type:'UPDATE', status:'NEEDS_CLIENT', billing:'BILLABLE',
+    title:'Online ordering for the catering menu', orgId:'org-hsk', orgName:'Harlem Soul Kitchen',
+    createdByName:'Marcus Terrell', createdAt:iso(3), updatedAt:iso(2), unread:false, assigneeName:'Charles',
+    changeOrder: CHANGE_ORDER, messages: REQUESTS[0].messages },
+  { id:'r-413', refNumber:'REQ-0413', type:'QUESTION', status:'NEW', billing:'UNSET',
+    title:'Question about editing prices after launch', orgId:'org-hsk', orgName:'Harlem Soul Kitchen',
+    createdByName:'Marcus Terrell', createdAt:iso(1,14), updatedAt:iso(1,14), unread:true, assigneeName:null,
+    messages:[{ id:'m3', authorName:'Marcus Terrell', internalOnly:false, createdAt:iso(1,14),
+      body:'Once we go live, how do I change a price without calling you?' }] },
+  { id:'r-407', refNumber:'REQ-0407', type:'UPDATE', status:'IN_PROGRESS', billing:'INCLUDED',
+    title:'Add Sunday brunch hours to the footer', orgId:'org-hsk', orgName:'Harlem Soul Kitchen',
+    createdByName:'Marcus Terrell', createdAt:iso(8), updatedAt:iso(4), unread:false, assigneeName:'Charles',
+    messages:[{ id:'m4', authorName:'Marcus Terrell', internalOnly:false, createdAt:iso(8),
+      body:'We started brunch on Sundays, 10 to 3. Can that go in the footer?' },
+      { id:'m5', authorName:'Charles', internalOnly:true, createdAt:iso(7),
+        body:'Trivial — 10 min. Bundle with the next deploy, do not start a separate branch.' }] },
+]
+
+const AGENTS = [
+  { id:'u-charles', name:'Charles Lamb', role:'ADMIN' },
+  { id:'u-ray', name:'Ray Mendes', role:'AGENT' },
+]
+
 const ADMIN_DASHBOARD = {
   newRequests: 3, awaitingReply: 4, pastDueInvoices: 1, callsDue: 9,
   money: { recurringCents: 65000, collectedCents: 234000, outstandingCents: 128500 },
@@ -312,14 +369,20 @@ const routes = [
     if (opts.method === 'POST') {
       return { id: 'r-new', refNumber: 'REQ-0417', status: 'NEW', ...opts.body, messages: [] }
     }
-    return { items: REQUESTS.map(({ messages, ...r }) => r), total: REQUESTS.length }
+    const staff = (opts.path || '').includes('scope=admin')
+    const src = staff ? ADMIN_REQUESTS : REQUESTS
+    return { items: src.map(({ messages, ...r }) => r), total: src.length }
   }],
   [/^\/v1\/requests\/([^/]+)\/messages$/, (m, opts) => ({
     id: 'm-' + Date.now(), authorName: 'Marcus Terrell', authorId: 'u-marcus',
     internalOnly: false, createdAt: new Date().toISOString(), body: opts.body?.body || '',
   })],
   [/^\/v1\/requests\/([^/]+)\/read$/, () => null],
-  [/^\/v1\/requests\/([^/]+)$/, (m) => REQUESTS.find((r) => r.id === m[1]) || REQUESTS[0]],
+  [/^\/v1\/requests\/([^/]+)$/, (m, opts) => {
+    const found = [...ADMIN_REQUESTS, ...REQUESTS].find((r) => r.id === m[1]) || REQUESTS[0]
+    if (opts.method === 'PATCH') return { ...found, ...opts.body }
+    return found
+  }],
 
   [/^\/v1\/change-orders\/([^/]+)\/approve$/, () => ({
     changeOrder: { ...CHANGE_ORDER, status: 'APPROVED', decidedAt: new Date().toISOString() },
@@ -335,7 +398,10 @@ const routes = [
   })],
   [/^\/v1\/assets\/([^/]+)\/complete$/, (m) => ({ id: m[1], uploadStatus: 'CONFIRMED' })],
   [/^\/v1\/assets\/([^/]+)\/url$/, () => ({ url: 'https://example-r2.invalid/mock-download' })],
-  [/^\/v1\/assets$/, () => ({ items: ASSETS, total: ASSETS.length })],
+  [/^\/v1\/assets$/, () => ({
+    items: ASSETS.map((a, i) => ({ ...a, visibility: i % 4 === 3 ? 'INTERNAL' : 'CLIENT' })),
+    total: ASSETS.length,
+  })],
 
   [/^\/v1\/billing\/summary$/, () => BILLING],
   [/^\/v1\/invoices\/([^/]+)\/payment-intent$/, () => ({
@@ -378,6 +444,13 @@ const routes = [
     }
     return { items: LEADS, total: LEADS.length }
   }],
+  [/^\/v1\/admin\/organizations\/([^/]+)$/, (m) => ORGS.find((o) => o.id === m[1]) || ORGS[0]],
+  [/^\/v1\/admin\/organizations$/, () => ({ items: ORGS, total: ORGS.length })],
+  [/^\/v1\/admin\/projects\/([^/]+)\/stages\/([^/]+)$/, (m, opts) => ({ stageKey: m[2], ...opts.body })],
+  [/^\/v1\/admin\/projects\/([^/]+)\/advance$/, () => ({ ...PROJECT, currentStage: 'REVIEW' })],
+  [/^\/v1\/admin\/projects$/, () => ({ items: [PROJECT], total: 1 })],
+  [/^\/v1\/admin\/agents$/, () => ({ items: AGENTS })],
+  [/^\/v1\/assets\/([^/]+)$/, (m, opts) => ({ id: m[1], ...opts.body })],
   [/^\/v1\/admin\/dashboard$/, () => ADMIN_DASHBOARD],
 ]
 
@@ -386,7 +459,7 @@ export async function mockFetch(path, opts = {}) {
   const clean = path.split('?')[0]
   for (const [re, fn] of routes) {
     const m = clean.match(re)
-    if (m) return fn(m, opts)
+    if (m) return fn(m, { ...opts, path })
   }
   // Unmocked route: fail loudly rather than returning undefined and
   // rendering a blank screen you'd spend an hour debugging.
