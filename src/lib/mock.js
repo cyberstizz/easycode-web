@@ -170,6 +170,90 @@ const ASSETS = [
   { id: 'a-8', filename: 'chef-marcus-portrait.jpg', contentType: 'image/jpeg', sizeBytes: 3040870, source: 'CLIENT_UPLOAD', reviewStatus: 'IN_USE', stageKey: 'DESIGN', createdAt: iso(186) },
 ]
 
+
+// ── leads ──────────────────────────────────────────────────
+const LEADS = [
+  { id:'l-denise', contactName:'Denise Whitaker', businessName:'Crown Heights Realty',
+    email:'denise@chrealty.com', phone:'(718) 555-0192', city:'Brooklyn NY', roleTitle:'Broker',
+    source:'REFERRAL', sourceNote:'Referral — Marcus T.', status:'NEGOTIATING', rungOffered:'FLOOR',
+    ownerName:'Charles', nextActionAt:iso(2), nextActionNote:'Brother said yes or no — close it or park it',
+    callCount:5, connectedCount:3, createdAt:iso(24),
+    leadWith:'Her objection is trust, not price. Show her the portal — watching the build stage by stage answers the exact fear she has, and it costs you nothing to give.',
+    notes:'Partner is her brother, handles the money. Best before 11 AM — showings all afternoon. Referred by Marcus, so a good outcome travels.',
+    rungHistory:{ STANDARD:'DECLINED', PREFERRED:'DECLINED', FLOOR:'OFFERED' },
+    activities:[
+      { id:'a1', type:'CALL', outcome:'CONNECTED', durationSeconds:840, occurredAt:iso(10,10), userName:'Charles',
+        objectionTags:['Trust'], rungOffered:'FLOOR',
+        body:"Dropped to the $100 floor and told her that's the end of the line. She said she needs to talk to her partner. Asked for it in writing — sent same day. Her real hesitation is she got burned by a designer last year who took a deposit and vanished." },
+      { id:'a2', type:'CALL', outcome:'CONNECTED', durationSeconds:540, occurredAt:iso(15,14), userName:'Charles',
+        objectionTags:['Cash flow'], rungOffered:'PREFERRED',
+        body:'Pitched the 2-year contract at $200 down. She liked the monthly number but balked at the deposit — cash is tight until listings pick up in September.' },
+      { id:'a3', type:'CALL', outcome:'VOICEMAIL', occurredAt:iso(20,11), userName:'Charles',
+        objectionTags:[], rungOffered:'NONE', body:'Left message referencing Marcus. No callback.' },
+      { id:'a4', type:'CALL', outcome:'CONNECTED', durationSeconds:1260, occurredAt:iso(24,9), userName:'Charles',
+        objectionTags:[], rungOffered:'STANDARD',
+        body:'First real conversation. Runs 3 agents, no site at all — everything goes through Zillow. Wants listing pages she controls. Quoted standard $1,200 at 50% down; she went quiet on the number.' },
+    ] },
+  { id:'l-priya', contactName:'Priya Raman', businessName:'Raman Physical Therapy', phone:'(917) 555-0143',
+    source:'COLD_CALL', status:'CONTACTED', rungOffered:'NONE', ownerName:'Charles',
+    nextActionAt:iso(6), nextActionNote:'Said call back after the 15th', callCount:3, connectedCount:1, activities:[] },
+  { id:'l-james', contactName:'James Ruiz', businessName:'BK Fitness Co.', phone:'(347) 555-0188',
+    source:'REFERRAL', status:'PITCHED', rungOffered:'PREFERRED', ownerName:'Charles',
+    nextActionAt:iso(0,9), nextActionNote:'Follow up — he was checking with his partner', callCount:2, connectedCount:2, activities:[] },
+  { id:'l-lourdes', contactName:'Lourdes Rivera', businessName:'Rivera Bakery', phone:'(718) 555-0210',
+    source:'COLD_CALL', status:'PITCHED', rungOffered:'PREFERRED', ownerName:'Charles',
+    nextActionAt:iso(0,14), nextActionNote:'Sent the contract offer Tuesday, no reply', callCount:2, connectedCount:1, activities:[] },
+  { id:'l-errol', contactName:'Errol Grant', businessName:'Grant & Sons Plumbing', phone:'(718) 555-0166',
+    source:'COLD_CALL', status:'PITCHED', rungOffered:'STANDARD', ownerName:'Charles',
+    nextActionAt:future(2), callCount:1, connectedCount:1, activities:[] },
+  { id:'l-hector', contactName:'Hector Diaz', businessName:'Diaz Landscaping', phone:'(914) 555-0177',
+    source:'REFERRAL', status:'NEGOTIATING', rungOffered:'PREFERRED', ownerName:'Charles',
+    nextActionAt:future(1), nextActionNote:'Wants a 1-year term instead of 2', callCount:4, connectedCount:3, activities:[] },
+  { id:'l-angela', contactName:'Angela Perez', businessName:'Bronx Family Dental', phone:'(718) 555-0122',
+    source:'COLD_CALL', status:'NEW', rungOffered:'NONE', ownerName:'Charles', callCount:0, connectedCount:0, activities:[] },
+  { id:'l-tony', contactName:'Tony Gallo', businessName:'Gallo Auto Body', phone:'(914) 555-0199',
+    source:'COLD_CALL', status:'NEW', rungOffered:'NONE', ownerName:'Charles', callCount:0, connectedCount:0, activities:[] },
+  { id:'l-simone', contactName:'Simone Baptiste', businessName:'Baptiste Hair Studio', phone:'(347) 555-0155',
+    source:'WEBSITE_FORM', status:'NEW', rungOffered:'NONE', ownerName:'Charles',
+    nextActionAt:iso(0,8), nextActionNote:'Filled out the website form', callCount:0, connectedCount:0, createdAt:iso(1), activities:[] },
+  { id:'l-victor', contactName:'Victor Nunez', businessName:'Nunez Moving & Storage', phone:'(718) 555-0133',
+    source:'REFERRAL', status:'NEW', rungOffered:'NONE', ownerName:'Charles', callCount:0, connectedCount:0, activities:[] },
+  { id:'l-dana', contactName:'Dana Okafor', businessName:'Okafor Tax Services', phone:'(917) 555-0101',
+    source:'COLD_CALL', status:'CONTACTED', rungOffered:'NONE', ownerName:'Charles',
+    nextActionAt:future(3), nextActionNote:'Callback Thursday', callCount:2, connectedCount:1, activities:[] },
+  { id:'l-michael', contactName:'Michael Sun', businessName:'Sun Garden Restaurant', phone:'(212) 555-0198',
+    source:'COLD_CALL', status:'CONTACTED', rungOffered:'NONE', ownerName:'Charles',
+    nextActionAt:future(5), callCount:1, connectedCount:1, activities:[] },
+  { id:'l-kwame', contactName:'Kwame Boateng', businessName:'Boateng Barbers', phone:'(347) 555-0144',
+    source:'COLD_CALL', status:'CONTACTED', rungOffered:'NONE', ownerName:'Charles',
+    nextActionAt:future(9), nextActionNote:'No answer x4 — try once more then park', callCount:4, connectedCount:0, activities:[] },
+  { id:'l-marcus', contactName:'Marcus Terrell', businessName:'Harlem Soul Kitchen', phone:'(212) 555-0147',
+    source:'COLD_CALL', status:'WON', rungOffered:'PREFERRED', ownerName:'Charles',
+    callCount:6, connectedCount:5, wonAt:iso(188), activities:[] },
+  { id:'l-rosa', contactName:'Rosa Almonte', businessName:'Almonte Flowers', phone:'(718) 555-0170',
+    source:'REFERRAL', status:'WON', rungOffered:'PREFERRED', ownerName:'Charles',
+    callCount:3, connectedCount:2, wonAt:iso(20), activities:[] },
+  { id:'l-ben', contactName:'Ben Osei', businessName:'Osei Insurance', phone:'(917) 555-0180',
+    source:'REFERRAL', status:'WON', rungOffered:'SPECIAL', ownerName:'Charles',
+    callCount:2, connectedCount:2, wonAt:iso(9), activities:[] },
+]
+
+const LEAD_STATS = {
+  dialsToday: 0, dialsGoal: 60, dialsThisWeek: 186, closedThisMonth: 3,
+  pipelineValueCents: 1960000,
+  objectionCounts: [
+    { tag: 'Cash flow', losses: 6 },
+    { tag: 'Trust', losses: 4 },
+    { tag: 'Happy as is', losses: 3 },
+  ],
+  rungConversion: [
+    { rung: 'PREFERRED', wins: 8, of: 10 },
+    { rung: 'FLOOR', wins: 1, of: 10 },
+    { rung: 'STANDARD', wins: 1, of: 10 },
+  ],
+  dialsPerClose: 62,
+}
+
 const ADMIN_DASHBOARD = {
   newRequests: 3, awaitingReply: 4, pastDueInvoices: 1, callsDue: 9,
   money: { recurringCents: 65000, collectedCents: 234000, outstandingCents: 128500 },
@@ -266,6 +350,34 @@ const routes = [
     billToName: 'Renee Terrell', billToEmail: 'renee@hsk.com', issuedOn: iso(7),
   })],
 
+  [/^\/v1\/admin\/leads\/board$/, () => ({ items: LEADS, stats: LEAD_STATS })],
+  [/^\/v1\/admin\/leads\/due$/, () => ({
+    items: LEADS.filter((l) => l.nextActionAt && l.status !== 'WON'), stats: LEAD_STATS,
+  })],
+  [/^\/v1\/admin\/leads\/([^/]+)\/activities$/, (m, opts) => ({
+    id: 'a-' + Date.now(), type: 'CALL', userName: 'Charles',
+    occurredAt: new Date().toISOString(), ...opts.body,
+  })],
+  [/^\/v1\/admin\/leads\/([^/]+)\/convert$/, () => ({
+    org: { id: 'org-new', name: 'Crown Heights Realty' },
+    project: { id: 'p-new', name: 'Crown Heights Realty — main site' },
+    invoice: { id: 'inv-new', number: 'INV-0033', totalCents: 10000 },
+    inviteSent: true,
+  })],
+  [/^\/v1\/admin\/leads\/([^/]+)$/, (m, opts) => {
+    const found = LEADS.find((l) => l.id === m[1]) || LEADS[0]
+    if (opts.method === 'PATCH') return { ...found, ...opts.body }
+    return found
+  }],
+  [/^\/v1\/admin\/leads$/, (_m, opts) => {
+    if (opts.method === 'POST') {
+      const created = { id: 'l-' + Date.now(), status: 'NEW', rungOffered: 'NONE',
+        callCount: 0, connectedCount: 0, activities: [], createdAt: new Date().toISOString(), ...opts.body }
+      LEADS.unshift(created)
+      return created
+    }
+    return { items: LEADS, total: LEADS.length }
+  }],
   [/^\/v1\/admin\/dashboard$/, () => ADMIN_DASHBOARD],
 ]
 
