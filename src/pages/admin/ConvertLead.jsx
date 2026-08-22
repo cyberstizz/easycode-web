@@ -1,0 +1,192 @@
+import { useState } from 'react'
+import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useApi } from '../../lib/useApi'
+import { post } from '../../lib/api'
+import { EP, RUNGS, rung, twoYearValueCents } from '../../lib/endpoints'
+import { useAuth } from '../../auth/AuthProvider'
+import { money } from '../../lib/format'
+import { TopBar } from '../../components/Shell'
+import Loading from '../../components/Loading'
+import ErrorNote from '../../components/ErrorNote'
+
+const iso = (d) => d.toISOString().slice(0, 10)
+const plusDays = (n) => { const d = new Date(); d.setDate(d.getDate() + n); return iso(d) }
+
+function Toggle({ on, onClick }) {
+  return <button type="button" className={`toggle${on ? ' on' : ''}`} onClick={onClick}><i /></button>
+}
+
+export default function ConvertLead() {
+  const { id } = useParams()
+  const nav = useNavigate()
+  const { isOwner } = useAuth()
+  const { data: lead, error, loading } = useApi(EP.adminLead(id))
+
+  const [tier, setTier] = useState(null)
+  const [projectName, setProjectName] = useState('')
+  const [projectType, setProjectType] = useState('Business website')
+  const [kickoffOn, setKickoffOn] = useState(plusDays(4))
+  const [estLaunchOn, setEstLaunchOn] = useState(plusDays(60))
+  const [sendInvite, setSendInvite] = useState(true)
+  const [sendInvoice, setSendInvoice] = useState(true)
+  const [requestAutopay, setRequestAutopay] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState(null)
+
+  if (loading) return <><TopBar crumbs={[{ label: 'Convert' }]} /><div className="wrap"><Loading full /></div></>
+  if (error) return <><TopBar crumbs={[{ label: 'Convert' }]} /><div className="wrap"><ErrorNote error={error} /></div></>
+
+  // Default to whatever rung was last on the table, and default the project
+  // name off the business — both are almost always right.
+  const chosen = tier || (lead.rungOffered !== 'NONE' ? lead.rungOffered : 'PREFERRED')
+  const r = rung(chosen)
+  const name = projectName || `${lead.businessName || lead.contactName} — main site`
+  const tiers = RUNGS.filter((t) => t.key !== 'NONE' && (!t.ownerOnly || isOwner))
+
+  const submit = async () => {
+    setSaving(true); setSaveError(null)
+    try {
+      const res = await post(EP.adminLeadConvert(id), {
+        dealTier: chosen,
+        downCents: r.down,
+        monthlyCents: r.monthly,
+        contractMonths: r.months,
+        projectName: name,
+        projectType,
+        kickoffOn,
+        estLaunchOn,
+        sendInvite,
+        sendDepositInvoice: sendInvoice,
+        requestAutopay,
+      })
+      nav(res?.org?.id ? `/admin/clients/${res.org.id}` : '/admin/clients')
+    } catch (e) { setSaveError(e) } finally { setSaving(false) }
+  }
+
+  return (
+    <>
+      <TopBar crumbs={[
+        { label: 'Pipeline', to: '/admin/pipeline' },
+        { label: lead.contactName, to: `/admin/leads/${id}` },
+        { label: 'Convert' },
+      ]} />
+
+      <div className="wrap" style={{ maxWidth: 760 }}>
+        <div style={{ marginBottom: 22 }}>
+          <div className="eyebrow" style={{ color: 'var(--em-hi)' }}>Closing the deal</div>
+          <h1 className="h1" style={{ marginTop: 7 }}>Set up {lead.businessName || lead.contactName}</h1>
+          <p className="sub">
+            One pass: creates the client, opens the project, sends the deposit invoice, and emails
+            {' '}{lead.contactName.split(' ')[0]} their portal invite.
+          </p>
+        </div>
+
+        <div className="card pad" style={{ marginBottom: 14 }}>
+          <div className="eyebrow" style={{ marginBottom: 14 }}>Which deal did they take?</div>
+          <div className="grid g4" style={{ gap: 10, marginBottom: 16 }}>
+            {tiers.map((t) => {
+              const on = chosen === t.key
+              return (
+                <button key={t.key} type="button" onClick={() => setTier(t.key)}
+                  className={`lrow${on ? ' sel' : ''}`}
+                  style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 4, padding: 13,
+                    ...(on ? { borderColor: t.key === 'SPECIAL' ? 'var(--violet)' : 'var(--em-line)' } : {}) }}>
+                  <span className="mono" style={{ fontSize: 9.5, color: on ? (t.key === 'SPECIAL' ? 'var(--violet)' : 'var(--em-hi)') : 'var(--ink-400)' }}>
+                    {t.label.toUpperCase()}{on ? ' ✓' : ''}
+                  </span>
+                  <span className="num" style={{ fontSize: 18, ...(on ? { color: t.key === 'SPECIAL' ? 'var(--violet)' : 'var(--em-hi)' } : {}) }}>
+                    {t.key === 'SPECIAL' ? 'Custom' : money(t.down, { withCents: false })}
+                  </span>
+                  <span style={{ fontSize: 11.5, color: 'var(--mute)' }}>{t.note}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          <div className="grid g3" style={{ gap: 0, border: '1px solid var(--ink-200)', borderRadius: 'var(--r)', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 16px', borderRight: '1px solid var(--ink-200)' }}>
+              <div className="eyebrow">Due today</div>
+              <div className="num" style={{ fontSize: 20, marginTop: 5 }}>{money(r.down)}</div>
+            </div>
+            <div style={{ padding: '14px 16px', borderRight: '1px solid var(--ink-200)' }}>
+              <div className="eyebrow">Then monthly</div>
+              <div className="num" style={{ fontSize: 20, marginTop: 5 }}>{money(r.monthly)}</div>
+            </div>
+            <div style={{ padding: '14px 16px' }}>
+              <div className="eyebrow">2-year value</div>
+              <div className="num" style={{ fontSize: 20, marginTop: 5, color: 'var(--em-hi)' }}>
+                {money(twoYearValueCents(chosen), { withCents: false })}
+              </div>
+            </div>
+          </div>
+
+          {chosen === 'SPECIAL' && (
+            <div className="note" style={{ marginTop: 14, background: 'rgba(139,92,246,.07)', border: '1px solid rgba(139,92,246,.25)', color: '#C4B5FD' }}>
+              Comped client. No Stripe subscription is created, and their Billing page shows a complimentary
+              state instead of a balance.
+            </div>
+          )}
+        </div>
+
+        <div className="card pad" style={{ marginBottom: 14 }}>
+          <div className="eyebrow" style={{ marginBottom: 14 }}>Project</div>
+          <div className="grid g2" style={{ marginBottom: 14 }}>
+            <div>
+              <label className="lbl">Project name</label>
+              <input className="inp" value={name} onChange={(e) => setProjectName(e.target.value)} />
+            </div>
+            <div>
+              <label className="lbl">Type</label>
+              <select className="inp" value={projectType} onChange={(e) => setProjectType(e.target.value)}>
+                <option>Business website</option>
+                <option>Restaurant website</option>
+                <option>Real estate website</option>
+                <option>E-commerce</option>
+                <option>Web application</option>
+              </select>
+            </div>
+          </div>
+          <div className="grid g2">
+            <div><label className="lbl">Kickoff</label><input type="date" className="inp mono" value={kickoffOn} onChange={(e) => setKickoffOn(e.target.value)} /></div>
+            <div><label className="lbl">Est. launch</label><input type="date" className="inp mono" value={estLaunchOn} onChange={(e) => setEstLaunchOn(e.target.value)} /></div>
+          </div>
+          <div className="note mute" style={{ marginTop: 14, fontSize: 12.5 }}>
+            Opens at stage <span className="mono" style={{ color: 'var(--violet)' }}>01 Discovery</span>.
+            They see the tracker the moment they sign in.
+          </div>
+        </div>
+
+        <div className="card pad" style={{ marginBottom: 18 }}>
+          <div className="eyebrow" style={{ marginBottom: 14 }}>What happens when you finish</div>
+          <div className="stack tight">
+            <div className="spread">
+              <span style={{ fontSize: 13 }}>Email {lead.contactName.split(' ')[0]} their portal invite</span>
+              <Toggle on={sendInvite} onClick={() => setSendInvite((v) => !v)} />
+            </div>
+            <div className="spread">
+              <span style={{ fontSize: 13 }}>Send the {money(r.down, { withCents: false })} deposit invoice</span>
+              <Toggle on={sendInvoice} onClick={() => setSendInvoice((v) => !v)} />
+            </div>
+            <div className="spread">
+              <span style={{ fontSize: 13 }}>Ask them to set up bank autopay for the monthly</span>
+              <Toggle on={requestAutopay} onClick={() => setRequestAutopay((v) => !v)} />
+            </div>
+          </div>
+          <div className="note amber" style={{ marginTop: 14, fontSize: 12.5 }}>
+            Push the bank autopay. Cards expire and the plan quietly dies in month nine — a bank mandate doesn't.
+          </div>
+        </div>
+
+        {saveError && <div style={{ marginBottom: 16 }}><ErrorNote error={saveError} /></div>}
+
+        <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
+          <button className="btn btn-p" style={{ padding: '12px 22px', fontSize: 14, opacity: saving ? 0.6 : 1 }}
+            disabled={saving} onClick={submit}>
+            {saving ? 'Setting everything up…' : 'Create client and send everything'}
+          </button>
+          <Link to={`/admin/leads/${id}`} className="btn btn-g" style={{ textDecoration: 'none' }}>Back to the lead</Link>
+        </div>
+      </div>
+    </>
+  )
+}
