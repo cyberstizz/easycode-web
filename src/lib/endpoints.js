@@ -48,6 +48,7 @@ export const EP = {
   changeOrderApprove: (id) => `/v1/change-orders/${id}/approve`,
   changeOrderDecline: (id) => `/v1/change-orders/${id}/decline`,
 
+  assets: (params = '') => `/v1/assets${params}`,
   assetPresign: () => '/v1/assets/presign',
   assetComplete: (id) => `/v1/assets/${id}/complete`,
   assetUrl: (id) => `/v1/assets/${id}/url`,
@@ -232,3 +233,12 @@ export const adaptConvert = (raw) => ({
   contact: raw?.contact,
   project: raw?.project,
 })
+
+
+/** GET /v1/assets -> a bare array. Normalise so pages read `.items` like everywhere else. */
+export const adaptAssets = (raw) => ({ items: Array.isArray(raw) ? raw : (raw?.items || []) })
+
+/** The backend stores CLIENT | INTERNAL. Only the first is ever shown to a client. */
+export const VISIBILITY = { CLIENT: 'CLIENT', INTERNAL: 'INTERNAL' }
+
+export const isImage = (mime) => (mime || '').startsWith('image/')
