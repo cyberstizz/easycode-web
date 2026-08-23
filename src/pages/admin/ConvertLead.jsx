@@ -44,7 +44,6 @@ export default function ConvertLead() {
   const [estLaunchOn, setEstLaunchOn] = useState(plusDays(60))
   const [sendInvite, setSendInvite] = useState(true)
   const [sendInvoice, setSendInvoice] = useState(true)
-  const [requestAutopay, setRequestAutopay] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
 
@@ -73,6 +72,10 @@ export default function ConvertLead() {
         // contractCents is the full build price; depositCents is what's due today.
         contractCents: 120000,
         depositCents: r.down,
+        // Dates go to the project, and the launch date is the first thing the
+        // client sees on their tracker.
+        startedAt: new Date(kickoffOn).toISOString(),
+        estLaunchAt: new Date(estLaunchOn).toISOString(),
         sendInvite,
       }))
       nav(res?.org?.id ? `/admin/clients/${res.org.id}` : '/admin/clients')
@@ -183,13 +186,11 @@ export default function ConvertLead() {
               <span style={{ fontSize: 13 }}>Send the {money(r.down, { withCents: false })} deposit invoice</span>
               <Toggle on={sendInvoice} onClick={() => setSendInvoice((v) => !v)} />
             </div>
-            <div className="spread">
-              <span style={{ fontSize: 13 }}>Ask them to set up bank autopay for the monthly</span>
-              <Toggle on={requestAutopay} onClick={() => setRequestAutopay((v) => !v)} />
-            </div>
           </div>
-          <div className="note amber" style={{ marginTop: 14, fontSize: 12.5 }}>
-            Push the bank autopay. Cards expire and the plan quietly dies in month nine — a bank mandate doesn't.
+          <div className="note mute" style={{ marginTop: 14, fontSize: 12.5 }}>
+            Autopay gets set up when they pay their first invoice, once Stripe is connected.
+            Push the bank option then — cards expire and the plan quietly dies in month nine,
+            where a bank mandate doesn't.
           </div>
         </div>
 
