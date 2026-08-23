@@ -82,7 +82,7 @@ export default function ClientDetail() {
           </div>
         </div>
 
-        <div className="split" style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(0,320px)' }}>
+        <div className="split aside-md">
           <div>
             <div className="sect-head" style={{ marginTop: 0 }}><span className="eyebrow">Projects</span><span className="rule" /></div>
             {projects.length === 0 ? (
