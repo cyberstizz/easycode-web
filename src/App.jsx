@@ -18,6 +18,8 @@ import LogCall from './pages/admin/LogCall'
 import ConvertLead from './pages/admin/ConvertLead'
 import NewLead from './pages/admin/NewLead'
 import RequestsInbox from './pages/admin/RequestsInbox'
+import Clients from './pages/admin/Clients'
+import Projects from './pages/admin/Projects'
 import ClientDetail from './pages/admin/ClientDetail'
 import ProjectEditor from './pages/admin/ProjectEditor'
 
@@ -72,9 +74,9 @@ export default function App() {
             <Route path="leads/:id" element={<LeadDetail />} />
             <Route path="leads/:id/log" element={<LogCall />} />
             <Route path="leads/:id/convert" element={<ConvertLead />} />
-            <Route path="clients" element={<Placeholder title="Clients" />} />
+            <Route path="clients" element={<Clients />} />
             <Route path="clients/:id" element={<ClientDetail />} />
-            <Route path="projects" element={<Placeholder title="Projects" />} />
+            <Route path="projects" element={<Projects />} />
             <Route path="projects/:id" element={<ProjectEditor />} />
             <Route path="invoices" element={<ProtectedRoute owner><Placeholder title="Invoices" /></ProtectedRoute>} />
             <Route path="agents" element={<ProtectedRoute owner><Placeholder title="Agents" /></ProtectedRoute>} />
