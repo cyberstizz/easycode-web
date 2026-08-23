@@ -25,6 +25,8 @@ import ProjectEditor from './pages/admin/ProjectEditor'
 
 import Overview from './pages/portal/Overview'
 import NewRequest from './pages/portal/NewRequest'
+import Files from './pages/portal/Files'
+import Settings from './pages/portal/Settings'
 import Project from './pages/portal/Project'
 import Requests from './pages/portal/Requests'
 import RequestDetail from './pages/portal/RequestDetail'
@@ -57,11 +59,11 @@ export default function App() {
             <Route path="requests" element={<Requests />} />
             <Route path="requests/new" element={<NewRequest />} />
             <Route path="requests/:id" element={<RequestDetail />} />
-            <Route path="files" element={<Placeholder title="Files" />} />
+            <Route path="files" element={<Files />} />
             <Route path="billing" element={<Placeholder title="Billing" />} />
             <Route path="invoices/:id" element={<Placeholder title="Invoice" />} />
             <Route path="invoices/:id/pay" element={<Placeholder title="Pay invoice" />} />
-            <Route path="settings" element={<Placeholder title="Settings" />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
 
           {/* admin console */}
