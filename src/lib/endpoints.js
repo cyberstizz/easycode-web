@@ -163,9 +163,9 @@ export const LEAD_SOURCE = {
   OTHER:        { label: 'Other',        chip: 'c-done' },
 }
 
-/** The five outcomes on the log-a-call screen, in tap order. */
+/** Call dispositions. Matches the backend's ActivityOutcome enum. */
 export const CALL_OUTCOME = [
-  { key: 'CONNECTED',      label: 'Connected',      good: true },
+  { key: 'CONNECTED',      label: 'Connected', good: true },
   { key: 'VOICEMAIL',      label: 'Voicemail' },
   { key: 'NO_ANSWER',      label: 'No answer' },
   { key: 'BAD_NUMBER',     label: 'Bad number' },
@@ -197,3 +197,38 @@ export const twoYearValueCents = (key) => {
   if (!r.down && !r.monthly) return 0
   return r.months ? r.down + r.monthly * r.months : 120000
 }
+
+
+/* ════════════════════════════════════════════════════════════════════
+   ADAPTERS
+
+   The API's envelopes differ per endpoint. Rather than teach every page
+   about that, unwrap here — one place to change if the backend moves.
+   ════════════════════════════════════════════════════════════════════ */
+
+/** GET /v1/admin/leads/board -> {columns:{STATUS:[...]}, stats} */
+export const adaptBoard = (raw) => ({
+  items: Object.values(raw?.columns || {}).flat(),
+  columns: raw?.columns || {},
+  stats: raw?.stats || {},
+})
+
+/** GET /v1/admin/leads/due -> {items, stats} */
+export const adaptDue = (raw) => ({
+  items: raw?.items || [],
+  stats: raw?.stats || {},
+})
+
+/** GET /v1/admin/leads/{id} -> {lead, activities} — flattened for the page. */
+export const adaptLead = (raw) => {
+  if (!raw) return null
+  const lead = raw.lead || raw
+  return { ...lead, activities: raw.activities || [] }
+}
+
+/** POST /v1/admin/leads/{id}/convert -> {organization, contact, project} */
+export const adaptConvert = (raw) => ({
+  org: raw?.organization,
+  contact: raw?.contact,
+  project: raw?.project,
+})
