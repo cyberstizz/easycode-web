@@ -85,7 +85,7 @@ export default function Login() {
         </form>
 
         <div className="auth-foot">
-          Trouble signing in? Call <span className="mono" style={{ color: 'var(--mute-hi)' }}>(212) 555-0100</span>
+        <span className="mono" style={{ color: 'var(--mute-hi)' }}>Lamb Services Inc.</span>
         </div>
       </div>
     </div>
