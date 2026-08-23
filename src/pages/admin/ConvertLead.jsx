@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
 import { post } from '../../lib/api'
-import { EP, RUNGS, rung, twoYearValueCents } from '../../lib/endpoints'
+import { EP, RUNGS, rung, twoYearValueCents, adaptLead, adaptConvert } from '../../lib/endpoints'
 import { useAuth } from '../../auth/AuthProvider'
 import { money } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
@@ -16,11 +16,26 @@ function Toggle({ on, onClick }) {
   return <button type="button" className={`toggle${on ? ' on' : ''}`} onClick={onClick}><i /></button>
 }
 
+function NoLead() {
+  return (
+    <div className="wrap" style={{ maxWidth: 520 }}>
+      <div className="estate" style={{ borderStyle: 'solid', borderColor: 'var(--ink-200)', marginTop: 40 }}>
+        <div className="h3" style={{ marginBottom: 6 }}>That lead link is broken</div>
+        <p style={{ fontSize: 12.5, color: 'var(--mute)', lineHeight: 1.6, maxWidth: 320, margin: '0 auto 15px' }}>
+          The URL has no lead id in it. The record may still have saved — check the pipeline.
+        </p>
+        <a href="/admin/pipeline" className="btn btn-s sm" style={{ textDecoration: 'none' }}>Open pipeline</a>
+      </div>
+    </div>
+  )
+}
+
 export default function ConvertLead() {
   const { id } = useParams()
   const nav = useNavigate()
   const { isOwner } = useAuth()
-  const { data: lead, error, loading } = useApi(EP.adminLead(id))
+  const validId = id && id !== 'undefined' && id !== 'null'
+  const { data: lead, error, loading } = useApi(validId ? EP.adminLead(id) : null, { select: adaptLead })
 
   const [tier, setTier] = useState(null)
   const [projectName, setProjectName] = useState('')
@@ -33,12 +48,13 @@ export default function ConvertLead() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
 
+  if (!validId) return <NoLead />
   if (loading) return <><TopBar crumbs={[{ label: 'Convert' }]} /><div className="wrap"><Loading full /></div></>
   if (error) return <><TopBar crumbs={[{ label: 'Convert' }]} /><div className="wrap"><ErrorNote error={error} /></div></>
 
   // Default to whatever rung was last on the table, and default the project
   // name off the business — both are almost always right.
-  const chosen = tier || (lead.rungOffered !== 'NONE' ? lead.rungOffered : 'PREFERRED')
+  const chosen = tier || lead.offeredTier || 'PREFERRED'
   const r = rung(chosen)
   const name = projectName || `${lead.businessName || lead.contactName} — main site`
   const tiers = RUNGS.filter((t) => t.key !== 'NONE' && (!t.ownerOnly || isOwner))
@@ -46,19 +62,19 @@ export default function ConvertLead() {
   const submit = async () => {
     setSaving(true); setSaveError(null)
     try {
-      const res = await post(EP.adminLeadConvert(id), {
-        dealTier: chosen,
-        downCents: r.down,
-        monthlyCents: r.monthly,
-        contractMonths: r.months,
+      const res = adaptConvert(await post(EP.adminLeadConvert(id), {
+        orgName: lead.businessName,
+        contactName: lead.contactName,
+        contactEmail: lead.email,
+        contactPhone: lead.phone,
         projectName: name,
         projectType,
-        kickoffOn,
-        estLaunchOn,
+        dealTier: chosen,
+        // contractCents is the full build price; depositCents is what's due today.
+        contractCents: 120000,
+        depositCents: r.down,
         sendInvite,
-        sendDepositInvoice: sendInvoice,
-        requestAutopay,
-      })
+      }))
       nav(res?.org?.id ? `/admin/clients/${res.org.id}` : '/admin/clients')
     } catch (e) { setSaveError(e) } finally { setSaving(false) }
   }
@@ -74,10 +90,10 @@ export default function ConvertLead() {
       <div className="wrap" style={{ maxWidth: 760 }}>
         <div style={{ marginBottom: 22 }}>
           <div className="eyebrow" style={{ color: 'var(--em-hi)' }}>Closing the deal</div>
-          <h1 className="h1" style={{ marginTop: 7 }}>Set up {lead.businessName || lead.contactName}</h1>
+          <h1 className="h1" style={{ marginTop: 7 }}>Set up {lead.businessName}</h1>
           <p className="sub">
             One pass: creates the client, opens the project, sends the deposit invoice, and emails
-            {' '}{lead.contactName.split(' ')[0]} their portal invite.
+            {' '}{(lead.contactName || 'them').split(' ')[0]} their portal invite.
           </p>
         </div>
 
@@ -160,7 +176,7 @@ export default function ConvertLead() {
           <div className="eyebrow" style={{ marginBottom: 14 }}>What happens when you finish</div>
           <div className="stack tight">
             <div className="spread">
-              <span style={{ fontSize: 13 }}>Email {lead.contactName.split(' ')[0]} their portal invite</span>
+              <span style={{ fontSize: 13 }}>Email {(lead.contactName || 'them').split(' ')[0]} their portal invite</span>
               <Toggle on={sendInvite} onClick={() => setSendInvite((v) => !v)} />
             </div>
             <div className="spread">
