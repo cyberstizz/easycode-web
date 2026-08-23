@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
-import { post, patch } from '../../lib/api'
-import { EP, CALL_OUTCOME, OBJECTION_TAGS, RUNGS, LEAD_STATUS } from '../../lib/endpoints'
+import { post } from '../../lib/api'
+import { EP, CALL_OUTCOME, OBJECTION_TAGS, RUNGS, LEAD_STATUS, adaptLead } from '../../lib/endpoints'
 import { useAuth } from '../../auth/AuthProvider'
 import { TopBar } from '../../components/Shell'
 import Loading from '../../components/Loading'
@@ -30,11 +30,26 @@ const addDays = (n) => {
   return d
 }
 
+function NoLead() {
+  return (
+    <div className="wrap" style={{ maxWidth: 520 }}>
+      <div className="estate" style={{ borderStyle: 'solid', borderColor: 'var(--ink-200)', marginTop: 40 }}>
+        <div className="h3" style={{ marginBottom: 6 }}>That lead link is broken</div>
+        <p style={{ fontSize: 12.5, color: 'var(--mute)', lineHeight: 1.6, maxWidth: 320, margin: '0 auto 15px' }}>
+          The URL has no lead id in it. The record may still have saved — check the pipeline.
+        </p>
+        <a href="/admin/pipeline" className="btn btn-s sm" style={{ textDecoration: 'none' }}>Open pipeline</a>
+      </div>
+    </div>
+  )
+}
+
 export default function LogCall() {
   const { id } = useParams()
   const nav = useNavigate()
   const { isOwner } = useAuth()
-  const { data: lead, error, loading } = useApi(EP.adminLead(id))
+  const validId = id && id !== 'undefined' && id !== 'null'
+  const { data: lead, error, loading } = useApi(validId ? EP.adminLead(id) : null, { select: adaptLead })
 
   const [outcome, setOutcome] = useState('CONNECTED')
   const [body, setBody] = useState('')
@@ -71,25 +86,24 @@ export default function LogCall() {
   const save = async (andNext = false) => {
     setSaving(true); setSaveError(null)
     try {
+      // One call. The backend applies the status, the next action, and the
+      // rung to the lead inside the same transaction as the activity.
       await post(EP.adminLeadActivities(id), {
         type: 'CALL',
         outcome,
-        durationSeconds: connected ? seconds : null,
         body: body.trim(),
+        durationSeconds: connected ? seconds : null,
         objectionTags: tags,
-        rungOffered,
-        occurredAt: new Date().toISOString(),
-      })
-      await patch(EP.adminLead(id), {
-        status,
-        rungOffered: rungOffered === 'NONE' ? lead.rungOffered : rungOffered,
+        rungOffered: rungOffered === 'NONE' ? null : rungOffered,
         nextActionAt: nextDate.toISOString(),
         nextActionNote: note.trim(),
+        status,
       })
       nav(andNext ? '/admin' : `/admin/leads/${id}`)
     } catch (e) { setSaveError(e) } finally { setSaving(false) }
   }
 
+  if (!validId) return <NoLead />
   if (loading) return <><TopBar crumbs={[{ label: 'Log a call' }]} /><div className="wrap"><Loading full /></div></>
   if (error) return <><TopBar crumbs={[{ label: 'Log a call' }]} /><div className="wrap"><ErrorNote error={error} /></div></>
 
@@ -106,7 +120,7 @@ export default function LogCall() {
           <div className="row" style={{ gap: 14 }}>
             <Avatar name={lead.contactName} size="lg" />
             <div>
-              <h1 className="h1" style={{ fontSize: 22 }}>{lead.contactName}</h1>
+              <h1 className="h1" style={{ fontSize: 22 }}>{lead.contactName || lead.businessName}</h1>
               <div style={{ fontSize: 12.5, color: 'var(--mute)', marginTop: 3 }}>
                 {lead.businessName} · <a href={`tel:${(lead.phone || '').replace(/\D/g, '')}`} className="mono" style={{ color: 'var(--em-hi)', textDecoration: 'none' }}>{lead.phone}</a>
               </div>
@@ -118,12 +132,12 @@ export default function LogCall() {
           </div>
         </div>
 
-        {lead.leadWith && (
+        {lead.notes && (
           <div className="note amber" style={{ marginBottom: 20, display: 'flex', gap: 11, alignItems: 'flex-start' }}>
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}>
               <circle cx="12" cy="12" r="9" /><path d="M12 16v-4M12 8h.01" />
             </svg>
-            <span><b>Before you dial:</b> {lead.leadWith}</span>
+            <span><b>Before you dial:</b> {lead.notes}</span>
           </div>
         )}
 
