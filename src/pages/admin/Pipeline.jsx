@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
-import { EP, LEAD_STATUS, LEAD_SOURCE, rung } from '../../lib/endpoints'
+import { EP, LEAD_STATUS, LEAD_SOURCE, rung, adaptBoard } from '../../lib/endpoints'
 import { money, daysUntil, ago } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import Loading from '../../components/Loading'
@@ -10,9 +10,9 @@ import Chip from '../../components/Chip'
 
 function Card({ lead }) {
   const src = LEAD_SOURCE[lead.source] || LEAD_SOURCE.OTHER
-  const late = lead.nextActionAt && daysUntil(lead.nextActionAt) < 0
-  const r = rung(lead.rungOffered)
-  const cold = lead.callCount >= 4 && lead.connectedCount === 0
+  const late = lead.overdue ?? (lead.nextActionAt && daysUntil(lead.nextActionAt) < 0)
+  const r = rung(lead.offeredTier)
+  const cold = (lead.callCount ?? 0) >= 4 && (lead.connectedCount ?? 0) === 0
 
   return (
     <Link to={`/admin/leads/${lead.id}`} className={`lrow${late ? ' unread' : ''}`}
@@ -22,16 +22,16 @@ function Card({ lead }) {
         ...(lead.status === 'WON' ? { borderColor: 'var(--em-line)' } : {}),
         ...(cold ? { opacity: 0.6 } : {}),
       }}>
-      <div className="lrow-t" style={{ fontSize: 13 }}>{lead.contactName}</div>
-      <div className="lrow-s">{lead.businessName}</div>
+      <div className="lrow-t" style={{ fontSize: 13 }}>{lead.contactName || lead.businessName}</div>
+      <div className="lrow-s">{lead.contactName ? lead.businessName : '\u2014'}</div>
       <div className="row" style={{ gap: 6, flexWrap: 'wrap' }}>
         {lead.status === 'NEW' && <Chip tone={src.chip} live={lead.source === 'WEBSITE_FORM'}>{src.label}</Chip>}
         {lead.status === 'CONTACTED' && (
           cold ? <Chip tone="c-done">No answer ×{lead.callCount}</Chip>
             : <Chip tone="c-done">{lead.callCount} call{lead.callCount === 1 ? '' : 's'}</Chip>
         )}
-        {['PITCHED', 'NEGOTIATING', 'WON'].includes(lead.status) && lead.rungOffered !== 'NONE' && (
-          <Chip tone={lead.rungOffered === 'SPECIAL' ? 'c-vio' : lead.status === 'WON' ? 'c-new' : 'c-prog'}>
+        {['PITCHED', 'NEGOTIATING', 'WON'].includes(lead.status) && lead.offeredTier && (
+          <Chip tone={lead.offeredTier === 'SPECIAL' ? 'c-vio' : lead.status === 'WON' ? 'c-new' : 'c-prog'}>
             {r.label}{r.down != null && r.key !== 'SPECIAL' ? ` · $${(r.down / 100).toFixed(0)}` : ''}
           </Chip>
         )}
@@ -48,7 +48,7 @@ function Card({ lead }) {
 }
 
 export default function Pipeline() {
-  const { data, error, loading, reload } = useApi(EP.adminLeadsBoard())
+  const { data, error, loading, reload } = useApi(EP.adminLeadsBoard(), { select: adaptBoard })
 
   if (loading) return <><TopBar crumbs={[{ label: 'Pipeline' }]} /><div className="wrap wide"><Loading full /></div></>
   if (error) return <><TopBar crumbs={[{ label: 'Pipeline' }]} /><div className="wrap wide"><ErrorNote error={error} onRetry={reload} /></div></>
