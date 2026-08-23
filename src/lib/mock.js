@@ -393,15 +393,17 @@ const routes = [
   [/^\/v1\/assets\/presign$/, (_m, opts) => ({
     assetId: 'a-' + Date.now(),
     uploadUrl: 'https://example-r2.invalid/mock-upload',
-    expiresAt: future(0),
-    filename: opts.body?.filename,
+    key: 'orgs/mock/' + (opts.body?.filename || 'file'),
+    expiresInMinutes: 15,
   })],
   [/^\/v1\/assets\/([^/]+)\/complete$/, (m) => ({ id: m[1], uploadStatus: 'CONFIRMED' })],
-  [/^\/v1\/assets\/([^/]+)\/url$/, () => ({ url: 'https://example-r2.invalid/mock-download' })],
-  [/^\/v1\/assets$/, () => ({
-    items: ASSETS.map((a, i) => ({ ...a, visibility: i % 4 === 3 ? 'INTERNAL' : 'CLIENT' })),
-    total: ASSETS.length,
-  })],
+  [/^\/v1\/assets\/([^/]+)\/url$/, () => ({ url: 'https://example-r2.invalid/mock-download', expiresInMinutes: 60 })],
+  [/^\/v1\/assets$/, () => ASSETS.map((a, i) => ({
+    id: a.id, projectId: 'p-hsk', requestId: null,
+    filename: a.filename, mime: a.contentType, bytes: a.sizeBytes,
+    caption: a.reviewStatus === 'NEEDS_REPLACEMENT' ? 'Too dark for the homepage — send a daylight version' : null,
+    visibility: i % 4 === 3 ? 'INTERNAL' : 'CLIENT', createdAt: a.createdAt,
+  }))],
 
   [/^\/v1\/billing\/summary$/, () => BILLING],
   [/^\/v1\/invoices\/([^/]+)\/payment-intent$/, () => ({
