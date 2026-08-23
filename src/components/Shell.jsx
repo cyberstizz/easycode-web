@@ -1,4 +1,5 @@
-import { NavLink, Link, Outlet, useNavigate } from 'react-router-dom'
+import { useState, useEffect } from 'react'
+import { NavLink, Link, Outlet, useNavigate, useLocation, useOutletContext } from 'react-router-dom'
 import { useAuth } from '../auth/AuthProvider'
 import Avatar from './Avatar'
 
@@ -20,9 +21,9 @@ const Icon = ({ d }) => (
   <svg className="ri" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{d}</svg>
 )
 
-function Item({ to, icon, label, count, hot, end }) {
+function Item({ to, icon, label, count, hot, end, onNavigate }) {
   return (
-    <NavLink to={to} end={end}
+    <NavLink to={to} end={end} onClick={onNavigate}
       className={({ isActive }) => `rail-item${isActive ? ' on' : ''}`}>
       <Icon d={icon} />
       {label}
@@ -34,12 +35,28 @@ function Item({ to, icon, label, count, hot, end }) {
 export default function Shell({ counts = {} }) {
   const { user, org, isStaff, isOwner, signOut } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
+  const [drawer, setDrawer] = useState(false)
+
+  const close = () => setDrawer(false)
+
+  // Close on navigation, or the drawer stays over the page you just opened.
+  useEffect(close, [location.pathname])
+
+  // Escape closes it, same as any other overlay.
+  useEffect(() => {
+    if (!drawer) return
+    const onKey = (e) => { if (e.key === 'Escape') close() }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [drawer])
 
   const handleSignOut = async () => { await signOut(); navigate('/login') }
 
   return (
     <div className="shell">
-      <aside className="rail">
+      <div className={`rail-scrim${drawer ? ' on' : ''}`} onClick={close} aria-hidden="true" />
+      <aside className={`rail${drawer ? ' open' : ''}`}>
         <Link to={isStaff ? '/admin' : '/portal'} className="brand" style={{ textDecoration: 'none' }}>
           <div className="brand-mark"><span>&lt;/&gt;</span></div>
           <div className="brand-name">easy<i>code</i></div>
@@ -50,20 +67,20 @@ export default function Shell({ counts = {} }) {
           <>
             <div className="rail-group" style={{ marginBottom: 20 }}>
               <div className="rail-label">Operations</div>
-              <Item to="/admin" end icon={I.clock} label="Today" count={counts.today} hot />
-              <Item to="/admin/requests" icon={I.inbox} label="Requests" count={counts.requests} hot />
-              <Item to="/admin/pipeline" icon={I.rows} label="Pipeline" count={counts.leads} />
+              <Item to="/admin" end icon={I.clock} label="Today" count={counts.today} hot onNavigate={close} />
+              <Item to="/admin/requests" icon={I.inbox} label="Requests" count={counts.requests} hot onNavigate={close} />
+              <Item to="/admin/pipeline" icon={I.rows} label="Pipeline" count={counts.leads} onNavigate={close} />
             </div>
             <div className="rail-group" style={{ marginBottom: 20 }}>
               <div className="rail-label">Book of business</div>
-              <Item to="/admin/clients" icon={I.users} label="Clients" count={counts.clients} />
-              <Item to="/admin/projects" icon={I.pulse} label="Projects" count={counts.projects} />
-              {isOwner && <Item to="/admin/invoices" icon={I.card} label="Invoices" count={counts.invoices} />}
+              <Item to="/admin/clients" icon={I.users} label="Clients" count={counts.clients} onNavigate={close} />
+              <Item to="/admin/projects" icon={I.pulse} label="Projects" count={counts.projects} onNavigate={close} />
+              {isOwner && <Item to="/admin/invoices" icon={I.card} label="Invoices" count={counts.invoices} onNavigate={close} />}
             </div>
             {isOwner && (
               <div className="rail-group">
                 <div className="rail-label">Team</div>
-                <Item to="/admin/agents" icon={I.team} label="Agents" count={counts.agents} />
+                <Item to="/admin/agents" icon={I.team} label="Agents" count={counts.agents} onNavigate={close} />
               </div>
             )}
           </>
@@ -71,15 +88,15 @@ export default function Shell({ counts = {} }) {
           <>
             <div className="rail-group" style={{ marginBottom: 20 }}>
               <div className="rail-label">{org?.name || user?.orgName || 'Your project'}</div>
-              <Item to="/portal" end icon={I.home} label="Overview" />
-              <Item to="/portal/project" icon={I.pulse} label="Project" />
-              <Item to="/portal/requests" icon={I.chat} label="Requests" count={counts.needsYou} hot />
-              <Item to="/portal/files" icon={I.folder} label="Files" count={counts.files} />
+              <Item to="/portal" end icon={I.home} label="Overview" onNavigate={close} />
+              <Item to="/portal/project" icon={I.pulse} label="Project" onNavigate={close} />
+              <Item to="/portal/requests" icon={I.chat} label="Requests" count={counts.needsYou} hot onNavigate={close} />
+              <Item to="/portal/files" icon={I.folder} label="Files" count={counts.files} onNavigate={close} />
             </div>
             <div className="rail-group">
               <div className="rail-label">Account</div>
-              <Item to="/portal/billing" icon={I.card} label="Billing" count={counts.unpaid} hot />
-              <Item to="/portal/settings" icon={I.gear} label="Settings" />
+              <Item to="/portal/billing" icon={I.card} label="Billing" count={counts.unpaid} hot onNavigate={close} />
+              <Item to="/portal/settings" icon={I.gear} label="Settings" onNavigate={close} />
             </div>
           </>
         )}
@@ -97,15 +114,28 @@ export default function Shell({ counts = {} }) {
         </div>
       </aside>
 
-      <main className="main"><Outlet /></main>
+      <main className="main">
+        <Outlet context={{ openDrawer: () => setDrawer(true) }} />
+      </main>
     </div>
   )
 }
 
-/** Sticky page header. Children go on the right. */
+/**
+ * Sticky page header. Children go on the right.
+ *
+ * The hamburger is CSS-hidden above 1080px, so it costs nothing on desktop
+ * and is the only way to reach the nav on a phone.
+ */
 export function TopBar({ crumbs = [], children }) {
+  const ctx = useOutletContext() || {}
   return (
     <div className="topbar">
+      <button className="rail-toggle" onClick={ctx.openDrawer} aria-label="Open menu">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2">
+          <path d="M3 6h18M3 12h18M3 18h18" />
+        </svg>
+      </button>
       <div className="crumb">
         {crumbs.map((c, i) => (
           <span key={i} style={{ display: 'contents' }}>
