@@ -6,7 +6,7 @@ import { api } from './api'
  * and nothing here needs cache invalidation across routes yet. If that
  * changes, swap this file and the pages don't move.
  */
-export function useApi(path, { skip = false } = {}) {
+export function useApi(path, { skip = false, select } = {}) {
   const [data, setData] = useState(null)
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(!skip)
@@ -14,10 +14,13 @@ export function useApi(path, { skip = false } = {}) {
   const load = useCallback(async () => {
     if (skip || !path) return
     setLoading(true); setError(null)
-    try { setData(await api(path)) }
+    try {
+      const raw = await api(path)
+      setData(select ? select(raw) : raw)
+    }
     catch (e) { setError(e) }
     finally { setLoading(false) }
-  }, [path, skip])
+  }, [path, skip])  // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load() }, [load])
 
