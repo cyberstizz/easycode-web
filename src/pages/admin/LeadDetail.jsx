@@ -1,6 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
-import { EP, RUNGS, rung, twoYearValueCents, LEAD_SOURCE, LEAD_STATUS } from '../../lib/endpoints'
+import { EP, RUNGS, rung, twoYearValueCents, LEAD_SOURCE, LEAD_STATUS, adaptLead } from '../../lib/endpoints'
 import { useAuth } from '../../auth/AuthProvider'
 import { money, dateTime, daysUntil, longDate } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
@@ -60,20 +60,41 @@ function Rung({ r, state }) {
   )
 }
 
+function NoLead() {
+  return (
+    <div className="wrap" style={{ maxWidth: 520 }}>
+      <div className="estate" style={{ borderStyle: 'solid', borderColor: 'var(--ink-200)', marginTop: 40 }}>
+        <div className="h3" style={{ marginBottom: 6 }}>That lead link is broken</div>
+        <p style={{ fontSize: 12.5, color: 'var(--mute)', lineHeight: 1.6, maxWidth: 320, margin: '0 auto 15px' }}>
+          The URL has no lead id in it. The record may still have saved — check the pipeline.
+        </p>
+        <a href="/admin/pipeline" className="btn btn-s sm" style={{ textDecoration: 'none' }}>Open pipeline</a>
+      </div>
+    </div>
+  )
+}
+
 export default function LeadDetail() {
   const { id } = useParams()
   const { isOwner } = useAuth()
-  const { data: lead, error, loading, reload } = useApi(EP.adminLead(id))
+  const validId = id && id !== 'undefined' && id !== 'null'
+  const { data: lead, error, loading, reload } = useApi(validId ? EP.adminLead(id) : null, { select: adaptLead })
 
+  if (!validId) return <NoLead />
   if (loading) return <><TopBar crumbs={[{ label: 'Pipeline', to: '/admin/pipeline' }]} /><div className="wrap wide"><Loading full /></div></>
   if (error) return <><TopBar crumbs={[{ label: 'Pipeline', to: '/admin/pipeline' }]} /><div className="wrap wide"><ErrorNote error={error} onRetry={reload} /></div></>
 
   const src = LEAD_SOURCE[lead.source] || LEAD_SOURCE.OTHER
   const statusMeta = LEAD_STATUS.find((s) => s.key === lead.status)
-  const history = lead.rungHistory || {}
-  const current = lead.rungOffered
+  const current = lead.offeredTier || 'NONE'
+  // Which rungs were declined is derivable from the activity history: any rung
+  // offered on an earlier call that is no longer the current one was passed on.
+  const history = {}
+  for (const a of lead.activities || []) {
+    if (a.rungOffered && a.rungOffered !== current) history[a.rungOffered] = 'DECLINED'
+  }
   const atFloor = current === 'FLOOR'
-  const late = lead.nextActionAt && daysUntil(lead.nextActionAt) < 0
+  const late = lead.overdue ?? (lead.nextActionAt && daysUntil(lead.nextActionAt) < 0)
   const activities = lead.activities || []
   const ladder = RUNGS.filter((r) => r.key !== 'NONE' && (!r.ownerOnly || isOwner))
 
@@ -91,13 +112,13 @@ export default function LeadDetail() {
               <Avatar name={lead.contactName} size="lg" />
               <div>
                 <div className="row" style={{ gap: 8, marginBottom: 4 }}>
-                  <h1 className="h1" style={{ fontSize: 21 }}>{lead.contactName}</h1>
+                  <h1 className="h1" style={{ fontSize: 21 }}>{lead.contactName || lead.businessName}</h1>
                   <Chip tone={lead.status === 'WON' ? 'c-new' : lead.status === 'NEGOTIATING' ? 'c-you' : 'c-done'}>
                     {statusMeta?.label || lead.status}
                   </Chip>
                 </div>
                 <div style={{ fontSize: 12.5, color: 'var(--mute)' }}>
-                  {[lead.roleTitle, lead.businessName, lead.city].filter(Boolean).join(' · ')}
+                  {lead.businessName}
                 </div>
                 <div className="row" style={{ gap: 14, marginTop: 7 }}>
                   {lead.phone && (
@@ -109,7 +130,7 @@ export default function LeadDetail() {
               </div>
             </div>
             <div className="row" style={{ gap: 22 }}>
-              <dl className="kv"><dt>Source</dt><dd>{lead.sourceNote || src.label}</dd></dl>
+              <dl className="kv"><dt>Source</dt><dd>{src.label}</dd></dl>
               <dl className="kv">
                 <dt>Calls</dt>
                 <dd className="mono" style={{ fontSize: 13.5 }}>{lead.callCount ?? 0} · {lead.connectedCount ?? 0} connected</dd>
@@ -177,7 +198,7 @@ export default function LeadDetail() {
                 />
               ) : activities.map((a, i) => (
                 <div key={a.id} className="msg" style={i === 0 ? { paddingTop: 0 } : undefined}>
-                  <Avatar name={a.userName} size="sm" tone="cool" />
+                  <Avatar name={a.userName || 'EasyCode'} size="sm" tone="cool" />
                   <div className="msg-b">
                     <div className="msg-h">
                       <span className="msg-n">{dateTime(a.occurredAt)}</span>
@@ -211,15 +232,8 @@ export default function LeadDetail() {
                     : longDate(lead.nextActionAt)}
                 </div>
                 <Link to={`/admin/leads/${id}/log`} className="btn btn-p sm blk" style={{ textDecoration: 'none' }}>
-                  Call {lead.contactName.split(' ')[0]} now
+                  Call {(lead.contactName || lead.businessName || '').split(' ')[0]} now
                 </Link>
-              </div>
-            )}
-
-            {lead.leadWith && (
-              <div className="card pad" style={{ marginTop: 14 }}>
-                <div className="eyebrow" style={{ marginBottom: 11 }}>Lead with this</div>
-                <div className="note mute" style={{ fontSize: 12.5, lineHeight: 1.6 }}>{lead.leadWith}</div>
               </div>
             )}
 
