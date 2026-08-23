@@ -182,7 +182,7 @@ export default function LeadDetail() {
           </div>
         )}
 
-        <div className="split" style={{ gridTemplateColumns: 'minmax(0,1fr) minmax(0,310px)' }}>
+        <div className="split aside-sm">
           <div>
             <div className="card pad">
               <div className="spread" style={{ marginBottom: 14 }}>
