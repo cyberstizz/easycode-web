@@ -89,7 +89,7 @@ export default function Pipeline() {
             action={<Link to="/admin/leads/new" className="btn btn-p sm" style={{ textDecoration: 'none' }}>Add a lead</Link>}
           />
         ) : (
-          <div style={{
+          <div className="board-cols" style={{
             display: 'grid',
             gridTemplateColumns: `repeat(${LEAD_STATUS.length}, minmax(196px, 1fr))`,
             gap: 11, overflowX: 'auto', paddingBottom: 8,
