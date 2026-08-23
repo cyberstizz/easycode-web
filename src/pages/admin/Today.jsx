@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
-import { EP, LEAD_SOURCE } from '../../lib/endpoints'
+import { EP, LEAD_SOURCE, adaptDue, adaptBoard } from '../../lib/endpoints'
 import { daysUntil, money } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import Loading from '../../components/Loading'
@@ -33,12 +33,12 @@ function CallRow({ lead, time, tone }) {
       <Avatar name={lead.contactName} />
       <div style={{ flex: 1, minWidth: 0 }}>
         <div className="lrow-t">
-          {lead.contactName}{' '}
+          {lead.contactName || lead.businessName}{' '}
           <span className="mono" style={{ fontSize: 10.5, color: 'var(--mute)', fontWeight: 400 }}>
-            · {lead.businessName}
+            · {lead.contactName ? lead.businessName : 'no contact name'}
           </span>
         </div>
-        <div className="lrow-s">{lead.nextActionNote || src.label}</div>
+        <div className="lrow-s">{lead.nextActionNote || lead.businessName || src.label}</div>
       </div>
       {tone === 'late' && <Chip tone="c-late">{Math.abs(daysUntil(lead.nextActionAt))} days late</Chip>}
       {tone === 'fresh' && <Chip tone={src.chip} live={lead.source === 'WEBSITE_FORM'}>{src.label}</Chip>}
@@ -50,8 +50,8 @@ function CallRow({ lead, time, tone }) {
 }
 
 export default function Today() {
-  const { data, error, loading, reload } = useApi(EP.adminLeadsDue())
-  const board = useApi(EP.adminLeadsBoard())
+  const { data, error, loading, reload } = useApi(EP.adminLeadsDue(), { select: adaptDue })
+  const board = useApi(EP.adminLeadsBoard(), { select: adaptBoard })
 
   if (loading) return <><TopBar crumbs={[{ label: 'Today' }]} /><div className="wrap wide"><Loading full /></div></>
   if (error) return <><TopBar crumbs={[{ label: 'Today' }]} /><div className="wrap wide"><ErrorNote error={error} onRetry={reload} /></div></>
@@ -62,8 +62,8 @@ export default function Today() {
 
   // Anything whose next action has already passed. These get called first —
   // a lead that's been waiting is a lead going cold.
-  const overdue = due.filter((l) => daysUntil(l.nextActionAt) < 0)
-  const today = due.filter((l) => daysUntil(l.nextActionAt) === 0)
+  const overdue = due.filter((l) => l.overdue ?? daysUntil(l.nextActionAt) < 0)
+  const today = due.filter((l) => !(l.overdue ?? daysUntil(l.nextActionAt) < 0))
   const fresh = all.filter((l) => l.status === 'NEW' && !l.nextActionAt)
   const total = overdue.length + today.length + fresh.length
 
