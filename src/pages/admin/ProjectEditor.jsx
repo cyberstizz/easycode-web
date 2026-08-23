@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
 import { patch, post } from '../../lib/api'
-import { EP, STAGES, STAGE_META } from '../../lib/endpoints'
+import { EP, STAGES, STAGE_META, adaptAssets, isImage } from '../../lib/endpoints'
 import { longDate, bytes } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import StageRail from '../../components/StageRail'
@@ -15,7 +15,7 @@ const isoDay = (d) => d ? new Date(d).toISOString().slice(0, 10) : ''
 export default function ProjectEditor() {
   const { id } = useParams()
   const { data: project, error, loading, reload, setData } = useApi(EP.project(id))
-  const assets = useApi(`/v1/assets?projectId=${id}`)
+  const assets = useApi(EP.assets(`?projectId=${id}`), { select: adaptAssets })
 
   const [stageKey, setStageKey] = useState(null)
   const [form, setForm] = useState({ progressPct: 0, clientNote: '', internalNote: '' })
@@ -197,7 +197,7 @@ export default function ProjectEditor() {
           {files.length > 0 && (
             <table className="tbl">
               <thead>
-                <tr><th>File</th><th>Stage</th><th>Size</th><th>Added</th><th style={{ textAlign: 'right' }}>Client can see</th></tr>
+                <tr><th>File</th><th>Caption</th><th>Size</th><th>Added</th><th style={{ textAlign: 'right' }}>Client can see</th></tr>
               </thead>
               <tbody>
                 {files.map((a) => (
@@ -205,16 +205,16 @@ export default function ProjectEditor() {
                     <td>
                       <div className="row" style={{ gap: 9 }}>
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                          stroke={a.contentType?.startsWith('image/') ? 'var(--violet)' : 'var(--mute)'} strokeWidth="2">
-                          {a.contentType?.startsWith('image/')
+                          stroke={isImage(a.mime) ? 'var(--violet)' : 'var(--mute)'} strokeWidth="2">
+                          {isImage(a.mime)
                             ? <><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="M21 15l-5-5L5 21" /></>
                             : <><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" /><path d="M14 2v6h6" /></>}
                         </svg>
                         <span style={{ fontWeight: 600, color: 'var(--white)' }}>{a.filename}</span>
                       </div>
                     </td>
-                    <td>{a.stageKey ? <Chip tone="c-prog">{STAGE_META[a.stageKey]?.n} {STAGE_META[a.stageKey]?.label}</Chip> : '—'}</td>
-                    <td className="mono" style={{ color: 'var(--mute)' }}>{bytes(a.sizeBytes)}</td>
+                    <td style={{ color: 'var(--mute)', fontSize: 12 }}>{a.caption || '—'}</td>
+                    <td className="mono" style={{ color: 'var(--mute)' }}>{bytes(a.bytes)}</td>
                     <td className="mono" style={{ color: 'var(--mute)' }}>{longDate(a.createdAt)}</td>
                     <td style={{ textAlign: 'right' }}>
                       <button className={`toggle${a.visibility === 'CLIENT' ? ' on' : ''}`}
