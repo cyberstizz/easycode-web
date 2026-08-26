@@ -5,6 +5,8 @@ import Shell from './components/Shell'
 import ErrorBoundary from './components/ErrorBoundary'
 import Placeholder from './pages/Placeholder'
 import NotFound from './pages/NotFound'
+import MarketingShell from './pages/marketing/MarketingShell'
+import Home from './pages/marketing/Home'
 
 import Login from './pages/auth/Login'
 import AcceptInvite from './pages/auth/AcceptInvite'
@@ -38,16 +40,20 @@ export default function App() {
         <AuthProvider>
         <Routes>
           {/* public */}
-          <Route path="/" element={<Placeholder title="Marketing home" note="Batch 5 mockups port here next." />} />
-          <Route path="/work" element={<Placeholder title="Work" />} />
-          <Route path="/how-it-works" element={<Placeholder title="How it works" />} />
-          <Route path="/pricing" element={<Placeholder title="Pricing" />} />
-          <Route path="/contact" element={<Placeholder title="Contact" />} />
+          <Route element={<MarketingShell />}>
+            <Route path="/" element={<Home />} />
+            <Route path="/work" element={<Placeholder title="Work" />} />
+            <Route path="/how-it-works" element={<Placeholder title="How it works" />} />
+            <Route path="/pricing" element={<Placeholder title="Pricing" />} />
+            <Route path="/contact" element={<Placeholder title="Contact" />} />
+          </Route>
 
           {/* auth */}
           <Route path="/login" element={<Login />} />
           <Route path="/invite/:token" element={<AcceptInvite />} />
           <Route path="/invite" element={<AcceptInvite />} />
+          {/* The API emails this exact path — see OrgService.invite */}
+          <Route path="/accept-invite" element={<AcceptInvite />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password/:token" element={<ResetPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
