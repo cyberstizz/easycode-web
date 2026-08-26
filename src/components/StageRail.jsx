@@ -33,9 +33,9 @@ export default function StageRail({ stages = [], currentStage, title, subtitle, 
             style={{ '--sc': meta.color, '--p': `${s.progressPct ?? 0}%` }}>
             <div className="seg-bar">
               {isLive && <div className="seg-fill" />}
+              <span className="seg-num">{meta.n}</span>
             </div>
             <div className="seg-meta">
-              <span className="seg-idx">{meta.n}</span>
               <span className="seg-name">{meta.label}</span>
               <span className="seg-date">{when}</span>
             </div>
