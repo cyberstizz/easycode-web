@@ -236,6 +236,12 @@ export const adaptConvert = (raw) => ({
   org: raw?.organization,
   contact: raw?.contact,
   project: raw?.project,
+  // Present only while email sending is off — that's when you have to deliver
+  // the link by hand.
+  acceptUrl: raw?.acceptUrl,
+  inviteEmail: raw?.inviteEmail,
+  inviteExpiresAt: raw?.inviteExpiresAt,
+  emailSent: raw?.emailSent,
 })
 
 
