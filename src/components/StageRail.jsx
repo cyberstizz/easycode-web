@@ -71,13 +71,17 @@ export default function StageRail({ stages = [], currentStage, title, subtitle, 
 }
 
 /** Compact six-tick version for list rows and cards. */
-export function MiniRail({ stages = [], currentStage }) {
+export function MiniRail({ stages = [], currentStage, position }) {
   const byKey = Object.fromEntries(stages.map((s) => [s.stageKey, s]))
+  // List endpoints return projects without their stages, so derive completion
+  // from the current stage's index when the array is empty.
+  const idx = position ?? STAGES.indexOf(currentStage)
   return (
     <div className="mini-rail">
-      {STAGES.map((k) => {
+      {STAGES.map((k, i) => {
         const s = byKey[k]
-        const cls = s?.status === 'COMPLETE' ? 'f' : k === currentStage ? 'a' : ''
+        const done = s ? s.status === 'COMPLETE' : i < idx
+        const cls = done ? 'f' : k === currentStage ? 'a' : ''
         return <i key={k} className={cls} />
       })}
     </div>
