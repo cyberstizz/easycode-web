@@ -4,7 +4,7 @@ import { useApi } from '../../lib/useApi'
 import { post } from '../../lib/api'
 import { EP, RUNGS, rung, twoYearValueCents, adaptLead, adaptConvert } from '../../lib/endpoints'
 import { useAuth } from '../../auth/AuthProvider'
-import { money } from '../../lib/format'
+import { money, longDate } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import Loading from '../../components/Loading'
 import ErrorNote from '../../components/ErrorNote'
@@ -46,6 +46,7 @@ export default function ConvertLead() {
   const [sendInvoice, setSendInvoice] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
+  const [done, setDone] = useState(null)
 
   if (!validId) return <NoLead />
   if (loading) return <><TopBar crumbs={[{ label: 'Convert' }]} /><div className="wrap"><Loading full /></div></>
@@ -78,8 +79,73 @@ export default function ConvertLead() {
         estLaunchAt: new Date(estLaunchOn).toISOString(),
         sendInvite,
       }))
-      nav(res?.org?.id ? `/admin/clients/${res.org.id}` : '/admin/clients')
+      // Deliberately NOT navigating. The accept link is returned once and never
+      // again — leaving the page would lose it.
+      setDone(res)
     } catch (e) { setSaveError(e) } finally { setSaving(false) }
+  }
+
+  if (done) {
+    return (
+      <>
+        <TopBar crumbs={[{ label: 'Pipeline', to: '/admin/pipeline' }, { label: 'Converted' }]} />
+        <div className="wrap" style={{ maxWidth: 640 }}>
+          <div className="card pad glow" style={{ marginBottom: 16 }}>
+            <div className="row" style={{ gap: 11, marginBottom: 12 }}>
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="var(--em)" strokeWidth="2.5">
+                <path d="M20 6L9 17l-5-5" />
+              </svg>
+              <div className="h2">{done.org?.name} is set up</div>
+            </div>
+            <p style={{ fontSize: 13.5, color: 'var(--mute)', lineHeight: 1.6 }}>
+              Client created, project opened at Discovery, and the lead marked won.
+            </p>
+          </div>
+
+          {done.acceptUrl ? (
+            <div className="card pad warn" style={{ marginBottom: 16 }}>
+              <div className="eyebrow" style={{ color: 'var(--amber)', marginBottom: 10 }}>
+                Send this link — it is shown once
+              </div>
+              <p style={{ fontSize: 13, color: 'var(--mute)', lineHeight: 1.6, marginBottom: 12 }}>
+                Email sending is off, so deliver it yourself. It works once, and it expires
+                {' '}{longDate(done.inviteExpiresAt)}. If you lose it, open the client and hit
+                Invite again for a fresh one.
+              </p>
+              <input className="inp mono" readOnly value={done.acceptUrl}
+                onFocus={(e) => e.target.select()} style={{ fontSize: 11.5 }} />
+              <div className="row" style={{ gap: 9, marginTop: 11 }}>
+                <button className="btn btn-p sm"
+                  onClick={() => navigator.clipboard?.writeText(done.acceptUrl)}>
+                  Copy link
+                </button>
+                <span style={{ fontSize: 11.5, color: 'var(--mute)' }}>
+                  for {done.inviteEmail}
+                </span>
+              </div>
+            </div>
+          ) : done.emailSent ? (
+            <div className="note mute" style={{ marginBottom: 16 }}>
+              Invite emailed to {done.inviteEmail}.
+            </div>
+          ) : (
+            <div className="note amber" style={{ marginBottom: 16 }}>
+              No invite was sent — you left that toggle off. Open the client and hit
+              Invite whenever you want to give them access.
+            </div>
+          )}
+
+          <div className="row" style={{ gap: 10, flexWrap: 'wrap' }}>
+            <Link to={`/admin/clients/${done.org?.id}`} className="btn btn-p" style={{ textDecoration: 'none' }}>
+              Open the client
+            </Link>
+            <Link to="/admin/pipeline" className="btn btn-g" style={{ textDecoration: 'none' }}>
+              Back to pipeline
+            </Link>
+          </div>
+        </div>
+      </>
+    )
   }
 
   return (
