@@ -10,6 +10,7 @@ import Home from './pages/marketing/Home'
 import HowItWorks from './pages/marketing/HowItWorks'
 import Pricing from './pages/marketing/Pricing'
 import Contact from './pages/marketing/Contact'
+import Work from './pages/marketing/Work'
 
 import Login from './pages/auth/Login'
 import AcceptInvite from './pages/auth/AcceptInvite'
@@ -45,7 +46,7 @@ export default function App() {
           {/* public */}
           <Route element={<MarketingShell />}>
             <Route path="/" element={<Home />} />
-            <Route path="/work" element={<Placeholder title="Work" />} />
+            <Route path="/work" element={<Work />} />
             <Route path="/how-it-works" element={<HowItWorks />} />
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/contact" element={<Contact />} />
