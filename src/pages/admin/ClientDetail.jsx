@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
+import { post } from '../../lib/api'
 import { EP, rung, STAGE_META } from '../../lib/endpoints'
 import { money, longDate, daysUntil, dateTime } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
@@ -14,6 +16,20 @@ const INVOICE_TONE = { PAID: 'c-new', SENT: 'c-you', PAST_DUE: 'c-late', DRAFT: 
 
 export default function ClientDetail() {
   const { id } = useParams()
+  // Invite link, held per contact. Only ever populated while email sending is
+  // off — once Resend is live the API stops returning it and the only copy is
+  // in the client's inbox.
+  const [invites, setInvites] = useState({})
+  const [inviteBusy, setInviteBusy] = useState(null)
+  const [inviteError, setInviteError] = useState(null)
+
+  const sendInvite = async (contactId) => {
+    setInviteBusy(contactId); setInviteError(null)
+    try {
+      const res = await post(EP.adminContactInvite(contactId))
+      setInvites((m) => ({ ...m, [contactId]: res }))
+    } catch (e) { setInviteError(e) } finally { setInviteBusy(null) }
+  }
   const { data: org, error, loading, reload } = useApi(EP.adminOrg(id))
   const reqs = useApi(`${EP.adminRequests()}?scope=admin`)
 
@@ -186,11 +202,51 @@ export default function ClientDetail() {
                         </div>
                       )}
                     </div>
-                    {!c.hasPortal && <button className="btn btn-g sm">{c.invitedAt ? 'Resend' : 'Invite'}</button>}
+                    <button className="btn btn-g sm" disabled={inviteBusy === c.id}
+                      onClick={() => sendInvite(c.id)}>
+                      {inviteBusy === c.id ? 'Sending…' : c.hasPortal ? 'Re-invite' : c.invitedAt ? 'Resend' : 'Invite'}
+                    </button>
                   </div>
                 ))}
               </div>
-              <button className="btn btn-s sm blk" style={{ marginTop: 13 }}>Invite someone to the portal</button>
+
+              {inviteError && <div style={{ marginTop: 12 }}><ErrorNote error={inviteError} /></div>}
+
+              {Object.entries(invites).map(([cid, inv]) => (
+                <div key={cid} className="note" style={{
+                  marginTop: 12, background: 'var(--em-dim)',
+                  border: '1px solid var(--em-line)', color: 'var(--text)',
+                }}>
+                  <div className="row" style={{ gap: 8, marginBottom: 8 }}>
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--em)" strokeWidth="2.5">
+                      <path d="M20 6L9 17l-5-5" />
+                    </svg>
+                    <span style={{ fontSize: 12.5, fontWeight: 600, color: 'var(--white)' }}>
+                      Invite created for {inv.email}
+                    </span>
+                  </div>
+
+                  {inv.acceptUrl ? (
+                    <>
+                      <div style={{ fontSize: 11.5, color: 'var(--mute)', lineHeight: 1.55, marginBottom: 9 }}>
+                        Email sending is off, so send this link yourself. It works once and
+                        expires {longDate(inv.expiresAt)}.
+                      </div>
+                      <input className="inp mono" readOnly value={inv.acceptUrl}
+                        onFocus={(e) => e.target.select()}
+                        style={{ fontSize: 11.5, padding: '8px 10px' }} />
+                      <button className="btn btn-p sm" style={{ marginTop: 9 }}
+                        onClick={() => navigator.clipboard?.writeText(inv.acceptUrl)}>
+                        Copy link
+                      </button>
+                    </>
+                  ) : (
+                    <div style={{ fontSize: 11.5, color: 'var(--mute)', lineHeight: 1.55 }}>
+                      Sent by email. Expires {longDate(inv.expiresAt)}.
+                    </div>
+                  )}
+                </div>
+              ))}
             </div>
 
             {org.notes && (
