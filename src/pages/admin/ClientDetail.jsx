@@ -183,7 +183,7 @@ export default function ClientDetail() {
               <div className="eyebrow" style={{ marginBottom: 12 }}>People</div>
               <div className="stack tight">
                 {contacts.map((c) => (
-                  <div key={c.id} className="row" style={{ gap: 10, ...(c.hasPortal ? {} : { opacity: 0.65 }) }}>
+                  <div key={c.id} className="row" style={{ gap: 10, ...(c.hasLogin ? {} : { opacity: 0.65 }) }}>
                     <Avatar name={c.name} size="sm" />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--white)' }}>
@@ -194,15 +194,15 @@ export default function ClientDetail() {
                       <div className="mono" style={{ fontSize: 10.5, color: 'var(--mute)' }}>
                         {c.email}{c.phone ? ` · ${c.phone}` : ''}
                       </div>
-                      {!c.hasPortal && (
+                      {!c.hasLogin && (
                         <div style={{ fontSize: 11, color: 'var(--amber)', marginTop: 2 }}>
-                          {c.invitedAt ? `Invited ${longDate(c.invitedAt)} — hasn't signed in` : 'No portal access'}
+                          No portal access yet
                         </div>
                       )}
                     </div>
                     <button className="btn btn-g sm" disabled={inviteBusy === c.id}
                       onClick={() => sendInvite(c.id)}>
-                      {inviteBusy === c.id ? 'Sending…' : c.hasPortal ? 'Re-invite' : c.invitedAt ? 'Resend' : 'Invite'}
+                      {inviteBusy === c.id ? 'Sending…' : c.hasLogin ? 'Re-invite' : 'Invite'}
                     </button>
                   </div>
                 ))}
