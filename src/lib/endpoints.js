@@ -73,12 +73,16 @@ export const EP = {
   adminContactInvite: (contactId) =>
     `/v1/admin/organizations/contacts/${contactId}/invite`,
 
+  // NOTE: /v1/admin/projects is POST-only. Listing goes through /v1/projects,
+  // which already returns every project for staff and filters by org for clients.
   adminProjects: () => '/v1/admin/projects',
+  adminProject: (id) => `/v1/admin/projects/${id}`,
+  projectsForOrg: (orgId) => `/v1/projects?orgId=${orgId}`,
   adminProjectStage: (projectId, stageKey) =>
     `/v1/admin/projects/${projectId}/stages/${stageKey}`,
   adminProjectAdvance: (projectId) => `/v1/admin/projects/${projectId}/advance`,
 
-  adminInvoices: () => '/v1/admin/invoices',
+  adminInvoices: (orgId) => `/v1/admin/invoices${orgId ? `?orgId=${orgId}` : ''}`,
   adminInvoiceSend: (id) => `/v1/admin/invoices/${id}/send`,
   adminInvoiceVoid: (id) => `/v1/admin/invoices/${id}/void`,
 
@@ -242,3 +246,7 @@ export const adaptAssets = (raw) => ({ items: Array.isArray(raw) ? raw : (raw?.i
 export const VISIBILITY = { CLIENT: 'CLIENT', INTERNAL: 'INTERNAL' }
 
 export const isImage = (mime) => (mime || '').startsWith('image/')
+
+
+/** Several list endpoints return a bare array. Normalise to `.items`. */
+export const adaptList = (raw) => ({ items: Array.isArray(raw) ? raw : (raw?.items || []) })

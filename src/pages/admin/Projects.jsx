@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
-import { EP, STAGES, STAGE_META } from '../../lib/endpoints'
+import { EP, STAGES, STAGE_META, adaptList } from '../../lib/endpoints'
 import { longDate, daysUntil } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import { MiniRail } from '../../components/StageRail'
@@ -11,7 +11,8 @@ import EmptyState from '../../components/EmptyState'
 import Chip from '../../components/Chip'
 
 export default function Projects() {
-  const { data, error, loading, reload } = useApi(EP.adminProjects())
+  // /v1/admin/projects is POST-only; the list lives at /v1/projects.
+  const { data, error, loading, reload } = useApi(EP.projects(), { select: adaptList })
   const [stage, setStage] = useState('all')
 
   const all = data?.items || []
@@ -66,6 +67,7 @@ export default function Projects() {
             <div className="stack tight">
               {rows.map((p) => {
                 const live = (p.stages || []).find((s) => s.stageKey === p.currentStage)
+                const pct = live?.progressPct
                 const late = p.estLaunchAt && daysUntil(p.estLaunchAt) < 0 && p.currentStage !== 'MAINTENANCE'
                 return (
                   <Link key={p.id} to={`/admin/projects/${p.id}`} className="card pad"
@@ -84,11 +86,11 @@ export default function Projects() {
                           </span>
                         )}
                         <Chip tone="c-prog" live>
-                          {STAGE_META[p.currentStage]?.label} {live?.progressPct ?? 0}%
+                          {STAGE_META[p.currentStage]?.label}{pct != null ? ` ${pct}%` : ''}
                         </Chip>
                       </div>
                     </div>
-                    <MiniRail stages={p.stages} currentStage={p.currentStage} />
+                    <MiniRail stages={p.stages} currentStage={p.currentStage} position={p.currentStagePosition} />
                   </Link>
                 )
               })}

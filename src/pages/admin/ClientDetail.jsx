@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
 import { post } from '../../lib/api'
-import { EP, rung, STAGE_META } from '../../lib/endpoints'
+import { EP, rung, STAGE_META, adaptList } from '../../lib/endpoints'
 import { money, longDate, daysUntil, dateTime } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import { MiniRail } from '../../components/StageRail'
@@ -32,15 +32,21 @@ export default function ClientDetail() {
   }
   const { data: org, error, loading, reload } = useApi(EP.adminOrg(id))
   const reqs = useApi(`${EP.adminRequests()}?scope=admin`)
+  // OrgView returns the org and its contacts only. Projects and invoices are
+  // separate endpoints, and the money figures are derived from the invoices.
+  const projs = useApi(id ? EP.projectsForOrg(id) : null, { select: adaptList })
+  const invs = useApi(id ? EP.adminInvoices(id) : null, { select: adaptList })
 
   if (loading) return <><TopBar crumbs={[{ label: 'Clients', to: '/admin/clients' }]} /><div className="wrap wide"><Loading full /></div></>
   if (error) return <><TopBar crumbs={[{ label: 'Clients', to: '/admin/clients' }]} /><div className="wrap wide"><ErrorNote error={error} onRetry={reload} /></div></>
 
   const tier = rung(org.dealTier)
   const comp = org.dealTier === 'SPECIAL'
-  const projects = org.projects || []
+  const projects = projs.data?.items || []
   const contacts = org.contacts || []
-  const invoices = org.invoices || []
+  const invoices = invs.data?.items || []
+  const lifetimeCents = invoices.reduce((n, i) => n + (i.amountPaidCents || 0), 0)
+  const outstandingCents = invoices.reduce((n, i) => n + (i.balanceCents || 0), 0)
   const openReqs = (reqs.data?.items || []).filter(
     (r) => r.orgId === org.id && !['DONE', 'DECLINED'].includes(r.status),
   )
@@ -67,7 +73,7 @@ export default function ClientDetail() {
                 </div>
                 <div style={{ fontSize: 12.5, color: 'var(--mute)' }}>
                   {[org.industry, org.address].filter(Boolean).join(' · ')}
-                  {org.clientSince && ` · client since ${longDate(org.clientSince)}`}
+                  {org.createdAt && ` · client since ${longDate(org.createdAt)}`}
                 </div>
               </div>
             </div>
@@ -75,25 +81,17 @@ export default function ClientDetail() {
               <dl className="kv">
                 <dt>Plan</dt>
                 <dd>
-                  {tier.label} · {comp ? 'no charge' : <>{money(org.monthlyCents)}<span style={{ color: 'var(--mute)', fontSize: 12 }}>/mo</span></>}
-                  {org.contractMonths ? ` · ${org.contractMonths / 12}-yr` : ''}
+                  {tier.label} · {comp ? 'no charge' : <>{money(tier.monthly)}<span style={{ color: 'var(--mute)', fontSize: 12 }}>/mo</span></>}
+                  {tier.months ? ` · ${tier.months / 12}-yr` : ''}
                 </dd>
               </dl>
-              <dl className="kv"><dt>Lifetime</dt><dd className="num" style={{ fontSize: 14 }}>{money(org.lifetimeCents, { withCents: false })}</dd></dl>
+              <dl className="kv"><dt>Collected</dt><dd className="num" style={{ fontSize: 14 }}>{money(lifetimeCents, { withCents: false })}</dd></dl>
               <dl className="kv">
                 <dt>Outstanding</dt>
-                <dd className="num" style={{ fontSize: 14, color: org.outstandingCents > 0 ? 'var(--amber)' : 'var(--mute)' }}>
-                  {money(org.outstandingCents, { withCents: false })}
+                <dd className="num" style={{ fontSize: 14, color: outstandingCents > 0 ? 'var(--amber)' : 'var(--mute)' }}>
+                  {money(outstandingCents, { withCents: false })}
                 </dd>
               </dl>
-              {org.includedHours > 0 && (
-                <dl className="kv">
-                  <dt>Hours this month</dt>
-                  <dd className="mono" style={{ fontSize: 13.5, color: org.hoursUsed > org.includedHours ? 'var(--amber)' : 'var(--text)' }}>
-                    {org.hoursUsed} <span style={{ color: 'var(--mute)' }}>/ {org.includedHours} incl.</span>
-                  </dd>
-                </dl>
-              )}
             </div>
           </div>
         </div>
@@ -115,15 +113,15 @@ export default function ClientDetail() {
                         <div>
                           <div className="h3">{p.name}</div>
                           <div style={{ fontSize: 12, color: 'var(--mute)', marginTop: 2 }}>
-                            {p.projectType}
-                            {p.estLaunchOn && ` · est. launch ${longDate(p.estLaunchOn)}`}
+                            {p.type}
+                            {p.estLaunchAt && ` · est. launch ${longDate(p.estLaunchAt)}`}
                           </div>
                         </div>
                         {started
-                          ? <Chip tone="c-prog" live>{STAGE_META[p.currentStage]?.label} {live?.progressPct ?? 0}%</Chip>
+                          ? <Chip tone="c-prog" live>{STAGE_META[p.currentStage]?.label}{live?.progressPct != null ? ` ${live.progressPct}%` : ''}</Chip>
                           : <Chip tone="c-done">Not started</Chip>}
                       </div>
-                      {started && <MiniRail stages={p.stages} currentStage={p.currentStage} />}
+                      {started && <MiniRail stages={p.stages} currentStage={p.currentStage} position={p.currentStagePosition} />}
                     </Link>
                   )
                 })}
@@ -163,16 +161,16 @@ export default function ClientDetail() {
                   {invoices.map((i) => (
                     <tr key={i.id}>
                       <td className="mono">{i.number}</td>
-                      <td>{i.description}</td>
-                      <td className="num" style={{ fontSize: 13 }}>{money(i.totalCents)}</td>
+                      <td>{i.memo || i.kind}</td>
+                      <td className="num" style={{ fontSize: 13 }}>{money(i.amountCents)}</td>
                       <td>
                         <Chip tone={INVOICE_TONE[i.status] || 'c-done'}>
-                          {i.status === 'SENT' && i.dueOn
-                            ? (daysUntil(i.dueOn) < 0 ? `${Math.abs(daysUntil(i.dueOn))}d late` : `Due in ${daysUntil(i.dueOn)}d`)
+                          {i.status === 'SENT' && i.dueAt
+                            ? (daysUntil(i.dueAt) < 0 ? `${Math.abs(daysUntil(i.dueAt))}d late` : `Due in ${daysUntil(i.dueAt)}d`)
                             : i.status}
                         </Chip>
                       </td>
-                      <td className="mono" style={{ color: 'var(--mute)' }}>{longDate(i.paidAt || i.dueOn)}</td>
+                      <td className="mono" style={{ color: 'var(--mute)' }}>{longDate(i.paidAt || i.dueAt)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -256,24 +254,6 @@ export default function ClientDetail() {
               </div>
             )}
 
-            {org.recentCalls?.length > 0 && (
-              <div className="card pad" style={{ marginTop: 14 }}>
-                <div className="eyebrow" style={{ marginBottom: 11 }}>Recent calls</div>
-                <div className="stack tight">
-                  {org.recentCalls.map((c) => (
-                    <div key={c.id}>
-                      <div style={{ fontSize: 12.5, color: 'var(--text)' }}>
-                        {longDate(c.at)} · <b style={{ color: c.outcome === 'CONNECTED' ? 'var(--white)' : 'var(--mute-hi)' }}>
-                          {c.outcome === 'CONNECTED' ? 'Connected' : 'Voicemail'}
-                        </b>
-                        {c.durationSeconds ? ` · ${Math.round(c.durationSeconds / 60)}m` : ''}
-                      </div>
-                      <div style={{ fontSize: 11.5, color: 'var(--mute)', marginTop: 1 }}>{c.body}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </div>
