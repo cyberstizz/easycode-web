@@ -408,7 +408,7 @@ a{color:inherit}
 .mrule{display:flex;align-items:baseline;gap:14px;margin-bottom:34px}
 .mrule .rule{flex:1;height:1px;background:var(--ink-200)}
 
-.hero{position:relative;overflow:hidden;padding:84px 0 68px}
+.hero{position:relative;overflow:hidden;padding:84px 0 68px;min-height:660px;display:flex;align-items:center}
 .hero::before{
   content:"";position:absolute;inset:-10% -20% auto;height:520px;pointer-events:none;
   background:radial-gradient(ellipse 46% 58% at 50% 0%,rgba(16,185,129,.115),transparent 68%);
@@ -461,7 +461,7 @@ a{color:inherit}
 @media (max-width:900px){
   .pnav-links{display:none}
   .msec{padding:54px 0}
-  .hero{padding:56px 0 46px}
+  .hero{padding:56px 0 46px;min-height:0;display:block}
 }
 @media (max-width:680px){
   .mwrap{padding:0 15px}
@@ -577,4 +577,39 @@ a{color:inherit}
   .grid.g3, .grid.g4{ grid-template-columns:1fr }
   .h1{ font-size:20px }
   .wrap{ padding:16px 15px }
+}
+
+
+/* ══════════════════════════════════════════════════════════════
+   HERO GLOBE
+   Sits behind the hero copy, bleeding off the right edge. Purely
+   decorative — aria-hidden, and it stops rotating for anyone with
+   reduced motion on.
+   ══════════════════════════════════════════════════════════════ */
+.globe-wrap{
+  position:absolute; right:-7%; top:50%; transform:translateY(-50%);
+  pointer-events:none; z-index:0; line-height:0;
+}
+.globe-canvas{ position:relative; z-index:1; opacity:.92 }
+
+/* A soft emerald bloom behind the dots, so the globe sits in the page
+   rather than floating on top of it. */
+.globe-glow{
+  position:absolute; inset:8%; border-radius:50%;
+  background:radial-gradient(circle at 38% 32%,
+    rgba(16,185,129,.20), rgba(16,185,129,.06) 45%, transparent 68%);
+  filter:blur(26px);
+}
+
+/* The hero column has to sit above the canvas and stay readable over it. */
+.hero .mwrap > *{ position:relative; z-index:2 }
+.hero .display,
+.hero .lede{ max-width:640px }
+
+@media (max-width:1180px){
+  .globe-wrap{ right:-24%; opacity:.5 }
+}
+@media (max-width:860px){
+  /* Behind the text at this width it fights the copy — drop it. */
+  .globe-wrap{ display:none }
 }

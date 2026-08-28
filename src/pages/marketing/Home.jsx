@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import StageRail from '../../components/StageRail'
+import PixelGlobe from '../../components/PixelGlobe'
 import { WORK } from './work-data'
 
 /**
@@ -29,6 +30,7 @@ export default function Home() {
   return (
     <>
       <div className="hero">
+        <PixelGlobe size={620} />
         <div className="mwrap" style={{ position: 'relative' }}>
           <div className="pill" style={{ marginBottom: 26 }}>
             <span className="dot live" />Taking on 4 more clients this quarter
