@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
-import { post } from '../../lib/api'
+import { get, post } from '../../lib/api'
+import { useAuth } from '../../auth/AuthProvider'
 import { EP, rung, STAGE_META, adaptList } from '../../lib/endpoints'
 import { money, longDate, daysUntil, dateTime } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
@@ -11,11 +12,14 @@ import ErrorNote from '../../components/ErrorNote'
 import EmptyState from '../../components/EmptyState'
 import Avatar from '../../components/Avatar'
 import Chip from '../../components/Chip'
+import ConfirmDelete from '../../components/ConfirmDelete'
 
 const INVOICE_TONE = { PAID: 'c-new', SENT: 'c-you', PAST_DUE: 'c-late', DRAFT: 'c-done', VOID: 'c-done', COMPLIMENTARY: 'c-vio' }
 
 export default function ClientDetail() {
   const { id } = useParams()
+  const nav = useNavigate()
+  const { isOwner } = useAuth()
   // Invite link, held per contact. Only ever populated while email sending is
   // off — once Resend is live the API stops returning it and the only copy is
   // in the client's inbox.
@@ -30,6 +34,33 @@ export default function ClientDetail() {
       setInvites((m) => ({ ...m, [contactId]: res }))
     } catch (e) { setInviteError(e) } finally { setInviteBusy(null) }
   }
+  // ── deleting the client ──────────────────────────────────────
+  const [confirming, setConfirming] = useState(false)
+  const [preview, setPreview] = useState(null)
+  const [previewLoading, setPreviewLoading] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState(null)
+
+  const openConfirm = async () => {
+    setConfirming(true); setDeleteError(null); setPreview(null); setPreviewLoading(true)
+    try { setPreview(await get(EP.adminOrgDeletionPreview(id))) }
+    catch (e) { setDeleteError(e) }
+    finally { setPreviewLoading(false) }
+  }
+
+  const doDelete = async ({ password, alsoLeads }) => {
+    setDeleting(true); setDeleteError(null)
+    try {
+      await post(EP.adminOrgDelete(id), {
+        password,
+        confirmName: org.name,
+        deleteLinkedLeads: alsoLeads,
+      })
+      // The record this page is about no longer exists — don't reload into a 404.
+      nav('/admin/clients', { replace: true, state: { deleted: org.name } })
+    } catch (e) { setDeleteError(e); setDeleting(false) }
+  }
+
   const { data: org, error, loading, reload } = useApi(EP.adminOrg(id))
   const reqs = useApi(`${EP.adminRequests()}?scope=admin`)
   // OrgView returns the org and its contacts only. Projects and invoices are
@@ -254,9 +285,31 @@ export default function ClientDetail() {
               </div>
             )}
 
+            {isOwner && (
+              <div className="card pad" style={{ marginTop: 14, borderColor: 'rgba(240,85,95,.22)' }}>
+                <div className="eyebrow" style={{ marginBottom: 9, color: 'var(--red)' }}>Danger zone</div>
+                <p style={{ fontSize: 12.5, color: 'var(--mute)', lineHeight: 1.6, marginBottom: 12 }}>
+                  Removes this client and everything attached — projects, requests, files,
+                  invoices and their portal logins. Permanent.
+                </p>
+                <button className="btn btn-d sm" onClick={openConfirm}>Delete this client</button>
+              </div>
+            )}
+
           </div>
         </div>
       </div>
+
+      <ConfirmDelete
+        open={confirming}
+        name={org.name}
+        preview={preview}
+        previewLoading={previewLoading}
+        busy={deleting}
+        error={deleteError}
+        onCancel={() => setConfirming(false)}
+        onConfirm={doDelete}
+      />
     </>
   )
 }
