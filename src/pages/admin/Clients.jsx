@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
 import { EP, rung } from '../../lib/endpoints'
 import { money, longDate } from '../../lib/format'
@@ -16,6 +16,10 @@ export default function Clients() {
   const { data, error, loading, reload } = useApi(EP.adminOrgs())
   const [q, setQ] = useState('')
   const [filter, setFilter] = useState('all')
+  // Set by ClientDetail after a delete — the client page can't say it itself,
+  // because by then it's gone.
+  const deleted = useLocation().state?.deleted
+  const [noticeGone, setNoticeGone] = useState(false)
 
   const all = data?.items || []
   const rows = all
@@ -38,6 +42,13 @@ export default function Clients() {
       </TopBar>
 
       <div className="wrap wide">
+        {deleted && !noticeGone && (
+          <div className="note mute" style={{ marginBottom: 16, display: 'flex',
+            justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+            <span><span style={{ color: 'var(--white)' }}>{deleted}</span> was deleted.</span>
+            <button className="btn btn-g sm" onClick={() => setNoticeGone(true)}>Dismiss</button>
+          </div>
+        )}
         <div className="spread" style={{ marginBottom: 20, alignItems: 'flex-end', flexWrap: 'wrap', gap: 16 }}>
           <div>
             <h1 className="h1">Clients</h1>
