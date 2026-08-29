@@ -73,6 +73,12 @@ export const EP = {
   adminContactInvite: (contactId) =>
     `/v1/admin/organizations/contacts/${contactId}/invite`,
 
+  // Deleting a client. The preview feeds the confirmation dialog's numbers; the
+  // delete is a POST because it carries a body (password + retyped name) and a
+  // DELETE-with-body has to survive the Netlify proxy hop.
+  adminOrgDeletionPreview: (id) => `/v1/admin/organizations/${id}/deletion-preview`,
+  adminOrgDelete: (id) => `/v1/admin/organizations/${id}/delete`,
+
   // NOTE: /v1/admin/projects is POST-only. Listing goes through /v1/projects,
   // which already returns every project for staff and filters by org for clients.
   adminProjects: () => '/v1/admin/projects',
