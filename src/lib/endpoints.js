@@ -101,6 +101,21 @@ export const EP = {
 }
 
 /** Ordered stage keys. The backend's StageKey enum — do not reorder. */
+/**
+ * Backend enum values, verified against com.easycode.api.domain.enums.
+ * The live stage is ACTIVE, not IN_PROGRESS — IN_PROGRESS belongs to
+ * RequestStatus and sending it to a stage endpoint is a 500.
+ */
+export const STAGE_STATUS = {
+  PENDING: 'PENDING', ACTIVE: 'ACTIVE', BLOCKED: 'BLOCKED', COMPLETE: 'COMPLETE',
+}
+export const CHANGE_ORDER_STATUS = {
+  PROPOSED: 'PROPOSED', APPROVED: 'APPROVED', DECLINED: 'DECLINED', CANCELLED: 'CANCELLED',
+}
+export const INVOICE_STATUS = {
+  DRAFT: 'DRAFT', OPEN: 'OPEN', PAID: 'PAID', VOID: 'VOID', UNCOLLECTIBLE: 'UNCOLLECTIBLE',
+}
+
 export const STAGES = [
   'DISCOVERY',
   'DESIGN',

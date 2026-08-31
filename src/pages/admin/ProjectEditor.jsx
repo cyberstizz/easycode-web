@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
 import { patch, post } from '../../lib/api'
-import { EP, STAGES, STAGE_META, adaptAssets, isImage } from '../../lib/endpoints'
+import { EP, STAGES, STAGE_META, STAGE_STATUS, adaptAssets, isImage } from '../../lib/endpoints'
 import { longDate, bytes } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import StageRail from '../../components/StageRail'
@@ -37,7 +37,7 @@ export default function ProjectEditor() {
 
   useEffect(() => {
     if (project) setMeta({
-      estLaunchOn: isoDay(project.estLaunchOn),
+      estLaunchOn: isoDay(project.estLaunchAt),
       previewUrl: project.previewUrl || '',
       liveUrl: project.liveUrl || '',
     })
@@ -56,9 +56,13 @@ export default function ProjectEditor() {
         progressPct: Number(form.progressPct),
         clientNote: form.clientNote,
         internalNote: form.internalNote,
-        status: Number(form.progressPct) >= 100 ? 'COMPLETE' : 'IN_PROGRESS',
+        status: Number(form.progressPct) >= 100 ? STAGE_STATUS.COMPLETE : STAGE_STATUS.ACTIVE,
       })
-      await patch(EP.adminProjects() + `/${id}`, meta).catch(() => {})
+      await patch(EP.adminProjects() + `/${id}`, {
+        estLaunchAt: meta.estLaunchOn || null,
+        previewUrl: meta.previewUrl,
+        liveUrl: meta.liveUrl,
+      })
       setData((p) => ({
         ...p, ...meta,
         stages: p.stages.map((s) => s.stageKey === active ? { ...s, ...form } : s),

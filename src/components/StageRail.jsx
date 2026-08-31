@@ -1,4 +1,4 @@
-import { STAGES, STAGE_META } from '../lib/endpoints'
+import { STAGES, STAGE_META, STAGE_STATUS } from '../lib/endpoints'
 import { shortDate } from '../lib/format'
 
 /**
@@ -19,8 +19,8 @@ export default function StageRail({ stages = [], currentStage, title, subtitle, 
       {STAGES.map((key) => {
         const meta = STAGE_META[key]
         const s = byKey[key] || { status: 'PENDING', progressPct: 0 }
-        const isDone = s.status === 'COMPLETE'
-        const isLive = s.status === 'IN_PROGRESS' || key === currentStage && !isDone
+        const isDone = s.status === STAGE_STATUS.COMPLETE
+        const isLive = s.status === STAGE_STATUS.ACTIVE || (key === currentStage && !isDone)
         const cls = isDone ? 'done' : isLive ? 'live' : ''
 
         const when = isDone ? shortDate(s.completedAt)

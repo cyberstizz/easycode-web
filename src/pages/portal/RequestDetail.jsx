@@ -11,7 +11,7 @@ import Avatar from '../../components/Avatar'
 import Chip from '../../components/Chip'
 
 function ChangeOrder({ co, onDecide, deciding }) {
-  if (!co || !['SENT', 'DRAFT'].includes(co.status)) return null
+  if (!co || co.status !== 'PROPOSED') return null
   return (
     <div className="card pad warn" style={{ marginBottom: 20 }}>
       <div className="spread" style={{ marginBottom: 14 }}>

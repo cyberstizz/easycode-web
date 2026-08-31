@@ -1,5 +1,5 @@
 import { useApi } from '../../lib/useApi'
-import { EP, STAGES, STAGE_META } from '../../lib/endpoints'
+import { EP, STAGES, STAGE_META, STAGE_STATUS } from '../../lib/endpoints'
 import { longDate } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import StageRail from '../../components/StageRail'
@@ -55,8 +55,8 @@ export default function Project() {
           {STAGES.map((key) => {
             const meta = STAGE_META[key]
             const s = byKey[key] || { status: 'PENDING', progressPct: 0 }
-            const isLive = s.status === 'IN_PROGRESS'
-            const isDone = s.status === 'COMPLETE'
+            const isLive = s.status === STAGE_STATUS.ACTIVE || key === p?.currentStage
+            const isDone = s.status === STAGE_STATUS.COMPLETE
             const upcoming = !isLive && !isDone
             return (
               <div key={key} className={`card pad${isLive ? ' glow' : ''}`}

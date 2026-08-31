@@ -5,7 +5,7 @@ import { STAGES, STAGE_META } from '../../lib/endpoints'
 const DEMO = [
   { stageKey: 'DISCOVERY', status: 'COMPLETE', progressPct: 100, completedAt: '2026-02-14' },
   { stageKey: 'DESIGN', status: 'COMPLETE', progressPct: 100, completedAt: '2026-02-28' },
-  { stageKey: 'DEVELOPMENT', status: 'IN_PROGRESS', progressPct: 68 },
+  { stageKey: 'DEVELOPMENT', status: 'ACTIVE', progressPct: 68 },
   { stageKey: 'REVIEW', status: 'PENDING', progressPct: 0, dueOn: '2026-03-20' },
   { stageKey: 'LAUNCH', status: 'PENDING', progressPct: 0, dueOn: '2026-04-01' },
   { stageKey: 'MAINTENANCE', status: 'PENDING', progressPct: 0 },

@@ -136,7 +136,7 @@ export default function ClientDetail() {
               <div className="stack tight">
                 {projects.map((p) => {
                   const live = (p.stages || []).find((s) => s.stageKey === p.currentStage)
-                  const started = p.status !== 'NOT_STARTED'
+                  const started = p.status === 'ACTIVE' || p.status === 'COMPLETE'
                   return (
                     <Link key={p.id} to={`/admin/projects/${p.id}`} className="card pad"
                       style={{ textDecoration: 'none', display: 'block', ...(started ? {} : { opacity: 0.72 }) }}>
@@ -196,7 +196,7 @@ export default function ClientDetail() {
                       <td className="num" style={{ fontSize: 13 }}>{money(i.amountCents)}</td>
                       <td>
                         <Chip tone={INVOICE_TONE[i.status] || 'c-done'}>
-                          {i.status === 'SENT' && i.dueAt
+                          {i.status === 'OPEN' && i.dueAt
                             ? (daysUntil(i.dueAt) < 0 ? `${Math.abs(daysUntil(i.dueAt))}d late` : `Due in ${daysUntil(i.dueAt)}d`)
                             : i.status}
                         </Chip>
