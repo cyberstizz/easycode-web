@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback } from 'react'
 import { useApi } from '../../lib/useApi'
 import { post, putToR2, api } from '../../lib/api'
-import { EP, adaptAssets, isImage } from '../../lib/endpoints'
+import { EP, adaptAssets, isImage, adaptProjects } from '../../lib/endpoints'
 import { bytes as fmtBytes, longDate, MAX_UPLOAD_BYTES, ALLOWED_UPLOAD_TYPES } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import Loading from '../../components/Loading'
@@ -24,7 +24,7 @@ const FileIcon = ({ mime }) => (
 )
 
 export default function Files() {
-  const projects = useApi(EP.projects())
+  const projects = useApi(EP.projects(), { select: adaptProjects })
   const projectId = projects.data?.items?.[0]?.id
   const orgId = projects.data?.items?.[0]?.orgId
 
