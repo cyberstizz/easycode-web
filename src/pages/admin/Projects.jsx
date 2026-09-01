@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
-import { EP, STAGES, STAGE_META, adaptList } from '../../lib/endpoints'
+import { EP, STAGES, STAGE_META, adaptProjects } from '../../lib/endpoints'
 import { longDate, daysUntil } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import { MiniRail } from '../../components/StageRail'
@@ -12,7 +12,7 @@ import Chip from '../../components/Chip'
 
 export default function Projects() {
   // /v1/admin/projects is POST-only; the list lives at /v1/projects.
-  const { data, error, loading, reload } = useApi(EP.projects(), { select: adaptList })
+  const { data, error, loading, reload } = useApi(EP.projects(), { select: adaptProjects })
   const [stage, setStage] = useState('all')
 
   const all = data?.items || []
@@ -66,7 +66,7 @@ export default function Projects() {
 
             <div className="stack tight">
               {rows.map((p) => {
-                const live = (p.stages || []).find((s) => s.stageKey === p.currentStage)
+                const live = (p.stages || []).find((s) => (s.stageKey ?? s.key) === p.currentStage)
                 const pct = live?.progressPct
                 const late = p.estLaunchAt && daysUntil(p.estLaunchAt) < 0 && p.currentStage !== 'MAINTENANCE'
                 return (
