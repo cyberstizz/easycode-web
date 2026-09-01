@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
-import { EP } from '../../lib/endpoints'
+import { EP, adaptPortalHome } from '../../lib/endpoints'
 import { money, daysUntil, dateTime, longDate } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import StageRail from '../../components/StageRail'
@@ -58,14 +58,14 @@ function NeedsYouCard({ item }) {
 }
 
 export default function Overview() {
-  const { data, error, loading, reload } = useApi(EP.portalHome())
+  const { data, error, loading, reload } = useApi(EP.portalHome(), { select: adaptPortalHome })
 
   if (loading) return <><TopBar crumbs={[{ label: 'Overview' }]} /><div className="wrap"><Loading full /></div></>
   if (error) return <><TopBar crumbs={[{ label: 'Overview' }]} /><div className="wrap"><ErrorNote error={error} onRetry={reload} /></div></>
 
   const { user, activeProject: p, needsYou = [], balanceDueCents, nextInvoice, recentActivity = [] } = data
   const dueIn = daysUntil(nextInvoice?.dueOn)
-  const live = p?.stages?.find((s) => s.stageKey === p.currentStage)
+  const live = p?.stages?.find((s) => (s.stageKey ?? s.key) === p.currentStage)
 
   return (
     <>
