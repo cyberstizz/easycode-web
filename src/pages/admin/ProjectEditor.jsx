@@ -12,6 +12,15 @@ import Chip from '../../components/Chip'
 
 const isoDay = (d) => d ? new Date(d).toISOString().slice(0, 10) : ''
 
+/**
+ * The date input gives back 'YYYY-MM-DD'. ProjectUpdate.estLaunchAt is a Java
+ * Instant, which needs a full ISO timestamp with a zone — a bare day string
+ * throws in Jackson before the controller runs. Noon UTC so the day doesn't
+ * roll backwards when it's rendered in a western timezone.
+ */
+const dayToInstant = (day) =>
+  day && /^\d{4}-\d{2}-\d{2}$/.test(day) ? new Date(`${day}T12:00:00.000Z`).toISOString() : null
+
 export default function ProjectEditor() {
   const { id } = useParams()
   const { data: project, error, loading, reload, setData } = useApi(EP.project(id))
@@ -59,9 +68,9 @@ export default function ProjectEditor() {
         status: Number(form.progressPct) >= 100 ? STAGE_STATUS.COMPLETE : STAGE_STATUS.ACTIVE,
       })
       await patch(EP.adminProjects() + `/${id}`, {
-        estLaunchAt: meta.estLaunchOn || null,
-        previewUrl: meta.previewUrl,
-        liveUrl: meta.liveUrl,
+        estLaunchAt: dayToInstant(meta.estLaunchOn),
+        previewUrl: meta.previewUrl || null,
+        liveUrl: meta.liveUrl || null,
       })
       setData((p) => ({
         ...p, ...meta,
