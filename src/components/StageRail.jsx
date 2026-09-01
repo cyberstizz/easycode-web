@@ -10,7 +10,7 @@ import { shortDate } from '../lib/format'
  * always show all six, even if the backend hasn't created a row yet.
  */
 export default function StageRail({ stages = [], currentStage, title, subtitle, readout, footer, bare = false }) {
-  const byKey = Object.fromEntries(stages.map((s) => [s.stageKey, s]))
+  const byKey = Object.fromEntries(stages.map((s) => [s.stageKey ?? s.key, s]))
   const liveIndex = Math.max(0, STAGES.indexOf(currentStage))
   const live = byKey[currentStage]
 
@@ -72,7 +72,7 @@ export default function StageRail({ stages = [], currentStage, title, subtitle, 
 
 /** Compact six-tick version for list rows and cards. */
 export function MiniRail({ stages = [], currentStage, position }) {
-  const byKey = Object.fromEntries(stages.map((s) => [s.stageKey, s]))
+  const byKey = Object.fromEntries(stages.map((s) => [s.stageKey ?? s.key, s]))
   // List endpoints return projects without their stages, so derive completion
   // from the current stage's index when the array is empty.
   const idx = position ?? STAGES.indexOf(currentStage)

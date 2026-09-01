@@ -277,3 +277,53 @@ export const isImage = (mime) => (mime || '').startsWith('image/')
 
 /** Several list endpoints return a bare array. Normalise to `.items`. */
 export const adaptList = (raw) => ({ items: Array.isArray(raw) ? raw : (raw?.items || []) })
+
+/**
+ * StageView serialises its stage identifier as `key`, not `stageKey`:
+ *
+ *     public record StageView(UUID id, StageKey key, String label, ...)
+ *
+ * Every page in this app reads `s.stageKey`. Unnormalised, that is undefined
+ * on every stage object, which silently breaks three separate things: the
+ * editor can't find the active stage so its form never loads saved values,
+ * `Object.fromEntries` collapses all six stages onto a single `undefined`
+ * key so every rail renders PENDING, and the optimistic update after a save
+ * never matches a row. The save itself was always reaching the database.
+ *
+ * Normalised here rather than at nine call sites. `key` is kept alongside so
+ * nothing that already reads it breaks.
+ */
+const withStageKey = (s) => (s && s.stageKey === undefined ? { ...s, stageKey: s.key } : s)
+
+const normalizeProject = (p) =>
+  !p ? p : { ...p, stages: Array.isArray(p.stages) ? p.stages.map(withStageKey) : (p.stages || []) }
+
+/** GET /v1/projects/{id} — one project with its six stages. */
+export const adaptProject = (raw) => normalizeProject(raw)
+
+/** GET /v1/projects — bare array or {items}; normalise both, stages included. */
+export const adaptProjects = (raw) => ({
+  items: (Array.isArray(raw) ? raw : (raw?.items || [])).map(normalizeProject),
+})
+
+/**
+ * RequestView has no `refNumber` — not in the DTO, not in V1__init.sql. The UI
+ * shows one in eleven places and portal search called .toLowerCase() on it,
+ * which threw the moment anyone typed in that box.
+ *
+ * Derived from the id so it is stable across reloads and readable on a phone
+ * call ("that's request 3F9A2C"). Swap this for a real sequential column when
+ * there's a migration to spare; the display contract stays the same.
+ */
+const withRefNumber = (r) =>
+  !r || r.refNumber ? r : { ...r, refNumber: 'REQ-' + String(r.id || '').replace(/-/g, '').slice(0, 6).toUpperCase() }
+
+export const adaptRequest = (raw) => withRefNumber(raw)
+
+export const adaptRequests = (raw) => ({
+  items: (Array.isArray(raw) ? raw : (raw?.items || [])).map(withRefNumber),
+})
+
+/** GET /v1/portal/home — the tracker lives on activeProject. */
+export const adaptPortalHome = (raw) =>
+  !raw ? raw : { ...raw, activeProject: normalizeProject(raw.activeProject) }

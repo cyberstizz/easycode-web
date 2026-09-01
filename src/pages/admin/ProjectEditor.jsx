@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
 import { patch, post } from '../../lib/api'
-import { EP, STAGES, STAGE_META, STAGE_STATUS, adaptAssets, isImage } from '../../lib/endpoints'
+import { EP, STAGES, STAGE_META, STAGE_STATUS, adaptProject, adaptAssets, isImage } from '../../lib/endpoints'
 import { longDate, bytes } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import StageRail from '../../components/StageRail'
@@ -23,7 +23,7 @@ const dayToInstant = (day) =>
 
 export default function ProjectEditor() {
   const { id } = useParams()
-  const { data: project, error, loading, reload, setData } = useApi(EP.project(id))
+  const { data: project, error, loading, reload, setData } = useApi(EP.project(id), { select: adaptProject })
   const assets = useApi(EP.assets(`?projectId=${id}`), { select: adaptAssets })
 
   const [stageKey, setStageKey] = useState(null)
@@ -72,10 +72,11 @@ export default function ProjectEditor() {
         previewUrl: meta.previewUrl || null,
         liveUrl: meta.liveUrl || null,
       })
-      setData((p) => ({
-        ...p, ...meta,
-        stages: p.stages.map((s) => s.stageKey === active ? { ...s, ...form } : s),
-      }))
+      // Refetch instead of patching local state optimistically. An optimistic
+      // update shows you what the app hoped happened; a reload shows what the
+      // database actually holds. When those two disagree — which is exactly the
+      // failure that hid this bug — you want to see the disagreement.
+      await reload()
       setSaved(true)
       setTimeout(() => setSaved(false), 2500)
     } catch (e) { setSaveError(e) } finally { setSaving(false) }
