@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { post } from '../../lib/api'
 import { useApi } from '../../lib/useApi'
-import { EP, REQUEST_TYPE } from '../../lib/endpoints'
+import { EP, REQUEST_TYPE, adaptProjects } from '../../lib/endpoints'
 import { TopBar } from '../../components/Shell'
 import ErrorNote from '../../components/ErrorNote'
 
@@ -16,7 +16,7 @@ const TYPES = [
 export default function NewRequest() {
   const nav = useNavigate()
   const [sp] = useSearchParams()
-  const { data: projects } = useApi(EP.projects())
+  const { data: projects } = useApi(EP.projects(), { select: adaptProjects })
   const [type, setType] = useState(sp.get('type') || 'UPDATE')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
