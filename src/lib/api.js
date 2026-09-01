@@ -21,16 +21,36 @@ export class ApiError extends Error {
 }
 
 /**
- * The backend may return either {error:{code,message,field}} or a bare
- * Spring problem-detail. Normalize both into ApiError so the UI has one shape.
+ * Normalize the backend's error shapes into one ApiError.
+ *
+ * GlobalExceptionHandler returns a FLAT body — {error: "server_error",
+ * message: "...", ref: "...", detail: "..."} — where `error` is a STRING.
+ * This function used to test `if (body?.error)` and then read
+ * `body.error.code` and `body.error.message` off it. Against a string those
+ * are both undefined, so every message the API sent was thrown away and the
+ * UI fell back to a generic "Something went wrong." for every failure on
+ * every endpoint. That is why a fixed bug and a new bug looked identical.
+ *
+ * Both shapes are handled now: nested {error:{code,message}} if it ever
+ * appears, and the flat one the API actually sends.
  */
 async function toApiError(res) {
   let body = null
   try { body = await res.json() } catch { /* empty or non-JSON body */ }
 
-  if (body?.error) {
+  // Nested shape: {error: {code, message, field}}
+  if (body?.error && typeof body.error === 'object') {
     return new ApiError(res.status, body.error.code, body.error.message, body.error.field)
   }
+
+  // Flat shape — what this API actually returns.
+  if (typeof body?.error === 'string') {
+    // `detail` only appears when APP_DEBUG_ERRORS=true, and is the precise cause.
+    const msg = body.detail || body.message
+    const withRef = body.ref ? `${msg} (ref ${body.ref})` : msg
+    return new ApiError(res.status, body.error.toUpperCase(), withRef, body.field)
+  }
+
   const message =
     body?.message ||
     body?.detail ||
