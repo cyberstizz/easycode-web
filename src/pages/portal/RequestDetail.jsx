@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
 import { post } from '../../lib/api'
-import { EP, REQUEST_TYPE, REQUEST_STATUS } from '../../lib/endpoints'
+import { EP, REQUEST_TYPE, REQUEST_STATUS, adaptRequest } from '../../lib/endpoints'
 import { money, dateTime, longDate } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import Loading from '../../components/Loading'
@@ -79,7 +79,7 @@ function ChangeOrder({ co, onDecide, deciding }) {
 export default function RequestDetail() {
   const { id } = useParams()
   const nav = useNavigate()
-  const { data: req, error, loading, reload, setData } = useApi(EP.request(id))
+  const { data: req, error, loading, reload, setData } = useApi(EP.request(id), { select: adaptRequest })
   const [reply, setReply] = useState('')
   const [sending, setSending] = useState(false)
   const [deciding, setDeciding] = useState(null)
