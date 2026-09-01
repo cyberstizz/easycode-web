@@ -1,5 +1,5 @@
 import { useApi } from '../../lib/useApi'
-import { EP, STAGES, STAGE_META, STAGE_STATUS } from '../../lib/endpoints'
+import { EP, STAGES, STAGE_META, STAGE_STATUS, adaptProjects } from '../../lib/endpoints'
 import { longDate } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import StageRail from '../../components/StageRail'
@@ -8,13 +8,13 @@ import ErrorNote from '../../components/ErrorNote'
 import Chip from '../../components/Chip'
 
 export default function Project() {
-  const { data: list, error, loading, reload } = useApi(EP.projects())
+  const { data: list, error, loading, reload } = useApi(EP.projects(), { select: adaptProjects })
   const p = list?.items?.[0]
 
   if (loading) return <><TopBar crumbs={[{ label: 'Project' }]} /><div className="wrap"><Loading full /></div></>
   if (error) return <><TopBar crumbs={[{ label: 'Project' }]} /><div className="wrap"><ErrorNote error={error} onRetry={reload} /></div></>
 
-  const byKey = Object.fromEntries((p?.stages || []).map((s) => [s.stageKey, s]))
+  const byKey = Object.fromEntries((p?.stages || []).map((s) => [s.stageKey ?? s.key, s]))
   const liveIdx = STAGES.indexOf(p?.currentStage)
 
   return (
