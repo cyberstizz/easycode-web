@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
-import { EP, REQUEST_TYPE, REQUEST_STATUS } from '../../lib/endpoints'
+import { EP, REQUEST_TYPE, REQUEST_STATUS, adaptRequests } from '../../lib/endpoints'
 import { ago } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import Loading from '../../components/Loading'
@@ -16,7 +16,7 @@ const FILTERS = [
 ]
 
 export default function Requests() {
-  const { data, error, loading, reload } = useApi(EP.requests())
+  const { data, error, loading, reload } = useApi(EP.requests(), { select: adaptRequests })
   const [filter, setFilter] = useState('open')
   const [q, setQ] = useState('')
 
@@ -24,7 +24,7 @@ export default function Requests() {
   const active = FILTERS.find((f) => f.key === filter)
   const rows = all
     .filter(active.test)
-    .filter((r) => !q || r.title.toLowerCase().includes(q.toLowerCase()) || r.refNumber.toLowerCase().includes(q.toLowerCase()))
+    .filter((r) => !q || r.title.toLowerCase().includes(q.toLowerCase()) || (r.refNumber || '').toLowerCase().includes(q.toLowerCase()))
 
   return (
     <>
