@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
-import { EP, adaptPortalHome } from '../../lib/endpoints'
+import { EP, adaptPortalHome, adaptProject } from '../../lib/endpoints'
+import { useAuth } from '../../auth/AuthProvider'
 import { money, daysUntil, dateTime, longDate } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import StageRail from '../../components/StageRail'
@@ -9,6 +10,12 @@ import ErrorNote from '../../components/ErrorNote'
 import EmptyState from '../../components/EmptyState'
 import Avatar from '../../components/Avatar'
 import Chip from '../../components/Chip'
+
+/** StageView calls the field `key`; adapted objects also carry `stageKey`. */
+const stageLabel = (s) => {
+  const k = s?.stageKey ?? s?.key ?? ''
+  return k ? k.charAt(0) + k.slice(1).toLowerCase() : 'Your project'
+}
 
 const greeting = () => {
   const h = new Date().getHours()
@@ -58,12 +65,22 @@ function NeedsYouCard({ item }) {
 }
 
 export default function Overview() {
+  const { user } = useAuth()
   const { data, error, loading, reload } = useApi(EP.portalHome(), { select: adaptPortalHome })
+
+  // /v1/portal/home builds its projects with ProjectView.summary(), which passes
+  // List.of() for stages — there is no stage data in that response at all. The
+  // tracker needs GET /v1/projects/{id}. Declared before the early returns so the
+  // hook order stays stable; a null path means useApi doesn't fetch.
+  const activeId = data?.activeProject?.id
+  const detail = useApi(activeId ? EP.project(activeId) : null, { select: adaptProject })
 
   if (loading) return <><TopBar crumbs={[{ label: 'Overview' }]} /><div className="wrap"><Loading full /></div></>
   if (error) return <><TopBar crumbs={[{ label: 'Overview' }]} /><div className="wrap"><ErrorNote error={error} onRetry={reload} /></div></>
 
-  const { user, activeProject: p, needsYou = [], balanceDueCents, nextInvoice, recentActivity = [] } = data
+  const { needsYou = [], balanceDueCents = 0, nextInvoice, recentActivity = [] } = data
+  // Prefer the detail fetch — it's the only one carrying stages.
+  const p = detail.data || data.activeProject
   const dueIn = daysUntil(nextInvoice?.dueOn)
   const live = p?.stages?.find((s) => (s.stageKey ?? s.key) === p.currentStage)
 
@@ -81,11 +98,11 @@ export default function Overview() {
             {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
           </div>
           <h1 className="h1" style={{ marginTop: 7 }}>
-            {greeting()}, {(user?.name || '').split(' ')[0]}.
+            {greeting()}{user?.name ? `, ${user.name.split(' ')[0]}` : ''}.
           </h1>
           <p className="sub">
             {live
-              ? `${live.stageKey.charAt(0)}${live.stageKey.slice(1).toLowerCase()} is ${live.progressPct}% through.`
+              ? `${stageLabel(live)} is ${live.progressPct ?? 0}% through.`
               : 'Here’s where things stand.'}
             {needsYou.length > 0 && ` ${needsYou.length} thing${needsYou.length > 1 ? 's need' : ' needs'} you.`}
           </p>
@@ -116,11 +133,11 @@ export default function Overview() {
             stages={p.stages}
             currentStage={p.currentStage}
             title={p.name}
-            subtitle={`${p.projectType} · started ${longDate(p.startedOn)}`}
+            subtitle={[p.type, p.startedAt && `started ${longDate(p.startedAt)}`].filter(Boolean).join(' · ')}
             footer={
               <>
                 <dl className="kv"><dt>Now building</dt><dd>{live?.clientNote || '—'}</dd></dl>
-                <dl className="kv"><dt>Est. launch</dt><dd>{longDate(p.estLaunchOn)}</dd></dl>
+                <dl className="kv"><dt>Est. launch</dt><dd>{p.estLaunchAt ? longDate(p.estLaunchAt) : '—'}</dd></dl>
                 {p.previewUrl && (
                   <dl className="kv push">
                     <dt>Preview</dt>
@@ -155,7 +172,7 @@ export default function Overview() {
             <div className="num" style={{ fontSize: 34 }}>
               {money(balanceDueCents, { withCents: false })}
               <span style={{ fontSize: 15, color: 'var(--mute)', fontWeight: 500 }}>
-                .{String(balanceDueCents % 100).padStart(2, '0')}
+                .{String((balanceDueCents ?? 0) % 100).padStart(2, '0')}
               </span>
             </div>
             {nextInvoice && (
@@ -165,9 +182,11 @@ export default function Overview() {
             )}
             <div className="hr" />
             <div className="row">
-              <Link to={`/portal/invoices/${nextInvoice?.id}/pay`} className="btn btn-p sm" style={{ textDecoration: 'none' }}>
-                Pay this invoice
-              </Link>
+              {nextInvoice?.id && (
+                <Link to={`/portal/invoices/${nextInvoice.id}/pay`} className="btn btn-p sm" style={{ textDecoration: 'none' }}>
+                  Pay this invoice
+                </Link>
+              )}
               <Link to="/portal/billing" className="btn btn-g sm" style={{ textDecoration: 'none' }}>
                 View all invoices
               </Link>

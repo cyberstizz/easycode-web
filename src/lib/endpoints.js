@@ -324,6 +324,77 @@ export const adaptRequests = (raw) => ({
   items: (Array.isArray(raw) ? raw : (raw?.items || [])).map(withRefNumber),
 })
 
-/** GET /v1/portal/home — the tracker lives on activeProject. */
-export const adaptPortalHome = (raw) =>
-  !raw ? raw : { ...raw, activeProject: normalizeProject(raw.activeProject) }
+/**
+ * GET /v1/portal/home.
+ *
+ * DashboardController.portalHome() returns:
+ *   { openRequests, unreadReplies, amountDueCents, projects[],
+ *     recentRequests[], recentFiles[], openInvoices[] }
+ *
+ * portal/Overview.jsx was written against a completely different contract:
+ *   { user, activeProject, needsYou[], balanceDueCents, nextInvoice, recentActivity[] }
+ *
+ * Not one of those six names is sent by the API. Every one resolved to
+ * undefined, which is why the page rendered "Good morning, ." with an empty
+ * tracker and a balance of ".NaN" — `undefined % 100` is NaN, printed straight
+ * into the markup.
+ *
+ * Mapped here rather than rewriting the page against raw field names, so the
+ * page keeps one shape whatever the endpoint does later.
+ *
+ * NOTE: `projects` here comes from ProjectView.summary(), which passes
+ * List.of() for stages — the portal home response carries NO stage data at
+ * all. The tracker has to come from GET /v1/projects/{id}. Overview fetches
+ * that separately; this adapter cannot invent it.
+ */
+export const adaptPortalHome = (raw) => {
+  if (!raw) return raw
+
+  const projects = (raw.projects || []).map(normalizeProject)
+  const invoices = raw.openInvoices || []
+  const inv = invoices[0]
+
+  // Requests parked on the client are the "needs you" cards.
+  const needsYou = (raw.recentRequests || [])
+    .filter((r) => r.status === 'NEEDS_CLIENT')
+    .map((r) => ({
+      kind: 'REQUEST',
+      requestId: r.id,
+      refNumber: withRefNumber(r).refNumber,
+      title: r.title,
+      body: '',
+      askedAt: r.updatedAt || r.createdAt,
+    }))
+
+  // No activity feed endpoint exists. Build one from what is actually sent.
+  const recentActivity = [
+    ...(raw.recentRequests || []).map((r) => ({
+      id: `req-${r.id}`,
+      actorName: r.orgName || 'You',
+      body: `opened ${r.title}`,
+      at: r.createdAt,
+    })),
+    ...(raw.recentFiles || []).map((f) => ({
+      id: `file-${f.id}`,
+      actorName: 'EasyCode',
+      body: `uploaded ${f.filename}`,
+      at: f.createdAt,
+    })),
+  ]
+    .filter((a) => a.at)
+    .sort((a, b) => new Date(b.at) - new Date(a.at))
+    .slice(0, 6)
+
+  return {
+    ...raw,
+    activeProject: projects[0] || null,
+    balanceDueCents: raw.amountDueCents ?? 0,
+    // InvoiceView is amountCents / memo / dueAt — not totalCents / description / dueOn.
+    nextInvoice: inv
+      ? { id: inv.id, number: inv.number, description: inv.memo || 'Invoice',
+          dueOn: inv.dueAt, amountCents: inv.amountCents }
+      : null,
+    needsYou,
+    recentActivity,
+  }
+}

@@ -1,5 +1,5 @@
 import { useApi } from '../../lib/useApi'
-import { EP, STAGES, STAGE_META, STAGE_STATUS, adaptProjects } from '../../lib/endpoints'
+import { EP, STAGES, STAGE_META, STAGE_STATUS, adaptProjects, adaptProject } from '../../lib/endpoints'
 import { longDate } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import StageRail from '../../components/StageRail'
@@ -8,8 +8,13 @@ import ErrorNote from '../../components/ErrorNote'
 import Chip from '../../components/Chip'
 
 export default function Project() {
+  // GET /v1/projects maps through ProjectView.summary(), which sends
+  // List.of() for stages. The list tells us WHICH project; only
+  // GET /v1/projects/{id} carries the six stages the tracker needs.
   const { data: list, error, loading, reload } = useApi(EP.projects(), { select: adaptProjects })
-  const p = list?.items?.[0]
+  const firstId = list?.items?.[0]?.id
+  const detail = useApi(firstId ? EP.project(firstId) : null, { select: adaptProject })
+  const p = detail.data || list?.items?.[0]
 
   if (loading) return <><TopBar crumbs={[{ label: 'Project' }]} /><div className="wrap"><Loading full /></div></>
   if (error) return <><TopBar crumbs={[{ label: 'Project' }]} /><div className="wrap"><ErrorNote error={error} onRetry={reload} /></div></>
