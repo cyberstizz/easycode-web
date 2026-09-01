@@ -3,7 +3,7 @@ import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
 import { get, post } from '../../lib/api'
 import { useAuth } from '../../auth/AuthProvider'
-import { EP, rung, STAGE_META, adaptList } from '../../lib/endpoints'
+import { EP, rung, STAGE_META, adaptList, adaptProjects, adaptRequests } from '../../lib/endpoints'
 import { money, longDate, daysUntil, dateTime } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import { MiniRail } from '../../components/StageRail'
@@ -62,10 +62,10 @@ export default function ClientDetail() {
   }
 
   const { data: org, error, loading, reload } = useApi(EP.adminOrg(id))
-  const reqs = useApi(`${EP.adminRequests()}?scope=admin`)
+  const reqs = useApi(`${EP.adminRequests()}?scope=admin`, { select: adaptRequests })
   // OrgView returns the org and its contacts only. Projects and invoices are
   // separate endpoints, and the money figures are derived from the invoices.
-  const projs = useApi(id ? EP.projectsForOrg(id) : null, { select: adaptList })
+  const projs = useApi(id ? EP.projectsForOrg(id) : null, { select: adaptProjects })
   const invs = useApi(id ? EP.adminInvoices(id) : null, { select: adaptList })
 
   if (loading) return <><TopBar crumbs={[{ label: 'Clients', to: '/admin/clients' }]} /><div className="wrap wide"><Loading full /></div></>
@@ -135,7 +135,7 @@ export default function ClientDetail() {
             ) : (
               <div className="stack tight">
                 {projects.map((p) => {
-                  const live = (p.stages || []).find((s) => s.stageKey === p.currentStage)
+                  const live = (p.stages || []).find((s) => (s.stageKey ?? s.key) === p.currentStage)
                   const started = p.status === 'ACTIVE' || p.status === 'COMPLETE'
                   return (
                     <Link key={p.id} to={`/admin/projects/${p.id}`} className="card pad"
