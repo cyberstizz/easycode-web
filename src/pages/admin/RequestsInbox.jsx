@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
 import { post, patch } from '../../lib/api'
-import { EP, REQUEST_TYPE, REQUEST_STATUS, BILLING_DISPOSITION } from '../../lib/endpoints'
+import { EP, REQUEST_TYPE, REQUEST_STATUS, BILLING_DISPOSITION, adaptRequest, adaptRequests } from '../../lib/endpoints'
 import { money, dateTime, ago } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import Loading from '../../components/Loading'
@@ -27,13 +27,13 @@ export default function RequestsInbox() {
   const { id } = useParams()
   const nav = useNavigate()
   const [filter, setFilter] = useState('open')
-  const { data, error, loading, reload } = useApi(`${EP.adminRequests()}?scope=admin`)
+  const { data, error, loading, reload } = useApi(`${EP.adminRequests()}?scope=admin`, { select: adaptRequests })
 
   const items = data?.items || []
   const rows = items.filter(FILTERS.find((f) => f.key === filter).test)
   const selectedId = id || rows[0]?.id
 
-  const detail = useApi(selectedId ? EP.request(selectedId) : null)
+  const detail = useApi(selectedId ? EP.request(selectedId) : null, { select: adaptRequest })
   const req = detail.data
 
   const [reply, setReply] = useState('')
