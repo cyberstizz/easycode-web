@@ -36,7 +36,7 @@ export default function Home() {
             <span className="dot live" />Taking on 4 more clients this quarter
           </div>
           <h1 className="display">
-            Reach Your Customers with Efficiency<br /><em>Endless Potential</em>
+            Reach Your Customers with Efficiency<br /><em>Provide Endless Potential</em>
           </h1>
           <p className="lede" style={{ marginTop: 24 }}>
             Every EasyCode client gets a login. You see what stage your site is in, what we&apos;re working
@@ -55,12 +55,12 @@ export default function Home() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--mute)" strokeWidth="2">
               <circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" />
             </svg>
-            <span style={{ fontSize: 12.5, color: 'var(--mute)' }}>
+            {/* <span style={{ fontSize: 12.5, color: 'var(--mute)' }}>
               Most quotes come back same day. Call{' '}
               <a href="tel:2125550100" className="mono" style={{ color: 'var(--mute-hi)', textDecoration: 'none' }}>
                 (212) 555-0100
               </a>{' '}and skip the form.
-            </span>
+            </span> */}
           </div>
         </div>
       </div>
