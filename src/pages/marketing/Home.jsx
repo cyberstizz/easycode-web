@@ -36,7 +36,7 @@ export default function Home() {
             <span className="dot live" />Taking on 4 more clients this quarter
           </div>
           <h1 className="display">
-            Most agencies build<br />in the dark.<br /><em>You watch ours.</em>
+            Reach Your Customers with Efficiency<br /><em>Endless Potential</em>
           </h1>
           <p className="lede" style={{ marginTop: 24 }}>
             Every EasyCode client gets a login. You see what stage your site is in, what we&apos;re working
