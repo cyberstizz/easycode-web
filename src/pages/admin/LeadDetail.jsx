@@ -1,5 +1,7 @@
-import { Link, useParams } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, useParams, useNavigate } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
+import { patch, del } from '../../lib/api'
 import { EP, RUNGS, rung, twoYearValueCents, LEAD_SOURCE, LEAD_STATUS, adaptLead } from '../../lib/endpoints'
 import { useAuth } from '../../auth/AuthProvider'
 import { money, dateTime, daysUntil, longDate } from '../../lib/format'
@@ -79,6 +81,52 @@ export default function LeadDetail() {
   const { isOwner } = useAuth()
   const validId = id && id !== 'undefined' && id !== 'null'
   const { data: lead, error, loading, reload } = useApi(validId ? EP.adminLead(id) : null, { select: adaptLead })
+  const nav = useNavigate()
+
+  // ── contact edit ─────────────────────────────────────────────
+  // The convert screen sends lead.email as the contact email, and a duplicate
+  // address is refused there. Editing it here is the way out of that.
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState({ contactName: '', email: '', phone: '', businessName: '' })
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [editError, setEditError] = useState(null)
+
+  const startEdit = () => {
+    setDraft({
+      contactName: lead.contactName || '',
+      email: lead.email || '',
+      phone: lead.phone || '',
+      businessName: lead.businessName || '',
+    })
+    setEditError(null); setEditing(true)
+  }
+  const saveEdit = async () => {
+    setSavingEdit(true); setEditError(null)
+    try {
+      await patch(EP.adminLead(id), {
+        businessName: draft.businessName.trim() || lead.businessName,
+        contactName: draft.contactName.trim(),
+        email: draft.email.trim().toLowerCase(),
+        phone: draft.phone.trim(),
+      })
+      await reload()
+      setEditing(false)
+    } catch (e) { setEditError(e) } finally { setSavingEdit(false) }
+  }
+
+  // ── delete ───────────────────────────────────────────────────
+  // Two clicks, no password: a lead is a phone number and a name, not a client
+  // with a project and invoices. The API refuses WON leads regardless.
+  const [confirmingDelete, setConfirmingDelete] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState(null)
+  const doDelete = async () => {
+    setDeleting(true); setDeleteError(null)
+    try {
+      await del(EP.adminLead(id))
+      nav('/admin/pipeline', { replace: true })
+    } catch (e) { setDeleteError(e); setDeleting(false) }
+  }
 
   if (!validId) return <NoLead />
   if (loading) return <><TopBar crumbs={[{ label: 'Pipeline', to: '/admin/pipeline' }]} /><div className="wrap wide"><Loading full /></div></>
@@ -101,9 +149,37 @@ export default function LeadDetail() {
   return (
     <>
       <TopBar crumbs={[{ label: 'Pipeline', to: '/admin/pipeline' }, { label: lead.contactName }]}>
+        {lead.status !== 'WON' && (
+          <button className="btn btn-g sm" onClick={() => setConfirmingDelete(true)}>Delete</button>
+        )}
+        <button className="btn btn-s sm" onClick={startEdit}>Edit contact</button>
         <Link to={`/admin/leads/${id}/log`} className="btn btn-s sm" style={{ textDecoration: 'none' }}>Log a call</Link>
-        <Link to={`/admin/leads/${id}/convert`} className="btn btn-p sm" style={{ textDecoration: 'none' }}>Mark won →</Link>
+        {lead.status !== 'WON' && (
+          <Link to={`/admin/leads/${id}/convert`} className="btn btn-p sm" style={{ textDecoration: 'none' }}>Mark won →</Link>
+        )}
       </TopBar>
+
+      {confirmingDelete && (
+        <div className="wrap wide" style={{ paddingBottom: 0 }}>
+          <div className="card pad" style={{ borderColor: 'rgba(240,85,95,.3)', background: 'var(--red-dim)' }}>
+            <div className="spread" style={{ gap: 14, flexWrap: 'wrap' }}>
+              <div>
+                <div className="h3" style={{ color: 'var(--white)' }}>Delete {lead.contactName || lead.businessName}?</div>
+                <div style={{ fontSize: 12.5, color: 'var(--mute)', marginTop: 4 }}>
+                  Removes the lead and its {activities.length} logged {activities.length === 1 ? 'call' : 'calls'}. This can't be undone.
+                </div>
+                {deleteError && <div style={{ marginTop: 10 }}><ErrorNote error={deleteError} /></div>}
+              </div>
+              <div className="row" style={{ gap: 8 }}>
+                <button className="btn btn-g sm" onClick={() => setConfirmingDelete(false)} disabled={deleting}>Keep it</button>
+                <button className="btn btn-d sm" onClick={doDelete} disabled={deleting}>
+                  {deleting ? 'Deleting…' : 'Delete lead'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="wrap wide">
         <div className="card pad" style={{ marginBottom: 16 }}>
@@ -120,13 +196,52 @@ export default function LeadDetail() {
                 <div style={{ fontSize: 12.5, color: 'var(--mute)' }}>
                   {lead.businessName}
                 </div>
-                <div className="row" style={{ gap: 14, marginTop: 7 }}>
-                  {lead.phone && (
-                    <a href={`tel:${lead.phone.replace(/\D/g, '')}`} className="mono"
-                      style={{ fontSize: 11.5, color: 'var(--em-hi)', textDecoration: 'none' }}>{lead.phone}</a>
-                  )}
-                  {lead.email && <span className="mono" style={{ fontSize: 11.5, color: 'var(--mute-hi)' }}>{lead.email}</span>}
-                </div>
+                {editing ? (
+                  <div style={{ marginTop: 10, display: 'grid', gap: 8, maxWidth: 460 }}>
+                    <div className="grid g2" style={{ gap: 8 }}>
+                      <div>
+                        <label className="lbl">Contact name</label>
+                        <input className="inp" value={draft.contactName}
+                          onChange={(e) => setDraft({ ...draft, contactName: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="lbl">Business</label>
+                        <input className="inp" value={draft.businessName}
+                          onChange={(e) => setDraft({ ...draft, businessName: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="grid g2" style={{ gap: 8 }}>
+                      <div>
+                        <label className="lbl">Email</label>
+                        <input className="inp mono" type="email" value={draft.email} autoComplete="off"
+                          onChange={(e) => setDraft({ ...draft, email: e.target.value })} />
+                      </div>
+                      <div>
+                        <label className="lbl">Phone</label>
+                        <input className="inp mono" type="tel" value={draft.phone}
+                          onChange={(e) => setDraft({ ...draft, phone: e.target.value })} />
+                      </div>
+                    </div>
+                    {editError && <ErrorNote error={editError} />}
+                    <div className="row" style={{ gap: 8 }}>
+                      <button className="btn btn-p sm" onClick={saveEdit} disabled={savingEdit}>
+                        {savingEdit ? 'Saving…' : 'Save contact'}
+                      </button>
+                      <button className="btn btn-g sm" onClick={() => setEditing(false)} disabled={savingEdit}>Cancel</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="row" style={{ gap: 14, marginTop: 7 }}>
+                    {lead.phone && (
+                      <a href={`tel:${lead.phone.replace(/\D/g, '')}`} className="mono"
+                        style={{ fontSize: 11.5, color: 'var(--em-hi)', textDecoration: 'none' }}>{lead.phone}</a>
+                    )}
+                    {lead.email && <span className="mono" style={{ fontSize: 11.5, color: 'var(--mute-hi)' }}>{lead.email}</span>}
+                    {!lead.email && !lead.phone && (
+                      <button className="btn btn-g sm" onClick={startEdit}>Add contact details</button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             <div className="row" style={{ gap: 22 }}>
