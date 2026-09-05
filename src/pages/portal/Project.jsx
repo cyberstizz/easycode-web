@@ -1,12 +1,22 @@
+import { useState } from 'react'
 import { useApi } from '../../lib/useApi'
-import { EP, STAGES, STAGE_META, STAGE_STATUS, adaptProjects, adaptProject } from '../../lib/endpoints'
+import { EP, STAGES, STAGE_META, STAGE_STATUS, DEVELOPER_NAME, adaptProjects, adaptProject } from '../../lib/endpoints'
 import { longDate } from '../../lib/format'
+import Prose, { extractAsks, firstLine } from '../../lib/markdown'
 import { TopBar } from '../../components/Shell'
 import StageRail from '../../components/StageRail'
+import StageThread from '../../components/StageThread'
 import Loading from '../../components/Loading'
 import ErrorNote from '../../components/ErrorNote'
-import Chip from '../../components/Chip'
 
+/**
+ * The client's project page.
+ *
+ * The rail at the top is the summary. The spine below is the story: each stage's
+ * update from the developer, then the conversation about it. The live stage is
+ * open; finished ones collapse to a line and expand on tap. There are no
+ * controls here — nothing on this page is editable except the reply box.
+ */
 export default function Project() {
   // GET /v1/projects maps through ProjectView.summary(), which sends
   // List.of() for stages. The list tells us WHICH project; only
@@ -15,74 +25,114 @@ export default function Project() {
   const firstId = list?.items?.[0]?.id
   const detail = useApi(firstId ? EP.project(firstId) : null, { select: adaptProject })
   const p = detail.data || list?.items?.[0]
+  const [openKey, setOpenKey] = useState(null)
 
-  if (loading) return <><TopBar crumbs={[{ label: 'Project' }]} /><div className="wrap"><Loading full /></div></>
+  if (loading || (firstId && detail.loading && !detail.data)) {
+    return <><TopBar crumbs={[{ label: 'Project' }]} /><div className="wrap"><Loading full /></div></>
+  }
   if (error) return <><TopBar crumbs={[{ label: 'Project' }]} /><div className="wrap"><ErrorNote error={error} onRetry={reload} /></div></>
+  if (!p) {
+    return (
+      <>
+        <TopBar crumbs={[{ label: 'Project' }]} />
+        <div className="wrap"><div className="note mute">Your project hasn't been set up yet. You'll see it here the moment it is.</div></div>
+      </>
+    )
+  }
 
-  const byKey = Object.fromEntries((p?.stages || []).map((s) => [s.stageKey ?? s.key, s]))
-  const liveIdx = STAGES.indexOf(p?.currentStage)
+  const byKey = Object.fromEntries((p.stages || []).map((s) => [s.stageKey ?? s.key, s]))
+  const liveKey = p.currentStage
+  const live = byKey[liveKey] || {}
+  const open = openKey || liveKey
+  const asks = extractAsks(live.clientNote)
+  const developer = DEVELOPER_NAME
 
   return (
     <>
-      <TopBar crumbs={[{ label: 'Overview', to: '/portal' }, { label: p?.name || 'Project' }]}>
-        {p?.previewUrl && (
+      <TopBar crumbs={[{ label: 'Overview', to: '/portal' }, { label: p.name || 'Project' }]}>
+        {p.previewUrl && (
           <a href={p.previewUrl} target="_blank" rel="noreferrer" className="btn btn-s sm" style={{ textDecoration: 'none' }}>
-            Preview site ↗
+            Open preview ↗
           </a>
         )}
       </TopBar>
 
       <div className="wrap">
-        <div className="spread" style={{ marginBottom: 20, alignItems: 'flex-end', flexWrap: 'wrap', gap: 14 }}>
+        <div className="proj-head">
           <div>
-            <div className="row" style={{ gap: 9, marginBottom: 7 }}>
-              <Chip tone="c-prog" live>
-                In {STAGE_META[p?.currentStage]?.label?.toLowerCase() || 'progress'}
-              </Chip>
-              <span className="eyebrow">{p?.projectType}</span>
+            <h1>{p.name}</h1>
+            <div className="sub">
+              In {STAGE_META[liveKey]?.label?.toLowerCase() || 'progress'}
+              {live.progressPct != null && <> · <b>{live.progressPct}%</b></>}
+              {p.estLaunchAt && <> · launching around <b>{longDate(p.estLaunchAt)}</b></>}
             </div>
-            <h1 className="h1">{p?.name}</h1>
-          </div>
-          <div className="row" style={{ gap: 26 }}>
-            <dl className="kv"><dt>Started</dt><dd className="mono" style={{ fontSize: 13 }}>{longDate(p?.startedOn)}</dd></dl>
-            <dl className="kv">
-              <dt>Est. launch</dt>
-              <dd className="mono" style={{ fontSize: 13, color: 'var(--em-hi)' }}>{longDate(p?.estLaunchOn)}</dd>
-            </dl>
           </div>
         </div>
 
-        <StageRail stages={p?.stages} currentStage={p?.currentStage} title="Build progress" />
+        <StageRail stages={p.stages} currentStage={liveKey} bare />
 
-        <div className="sect-head"><span className="eyebrow">Stage by stage</span><span className="rule" /></div>
+        {asks.length > 0 && (
+          <div className="needs">
+            <div className="k">!</div>
+            <div>
+              <b>{developer} needs something from you</b><br />
+              <span>{asks[0]}{asks.length > 1 ? ` — and ${asks.length - 1} more below` : ''}</span>
+            </div>
+            <a className="btn btn-s sm push" href="#reply" onClick={() => setOpenKey(liveKey)}>Reply</a>
+          </div>
+        )}
 
-        <div className="stack">
-          {STAGES.map((key) => {
-            const meta = STAGE_META[key]
-            const s = byKey[key] || { status: 'PENDING', progressPct: 0 }
-            const isLive = s.status === STAGE_STATUS.ACTIVE || key === p?.currentStage
-            const isDone = s.status === STAGE_STATUS.COMPLETE
-            const upcoming = !isLive && !isDone
+        <div className="story">
+          {[...STAGES].reverse().map((key) => {
+            const m = STAGE_META[key]
+            const st = byKey[key] || {}
+            const isDone = st.status === STAGE_STATUS.COMPLETE
+            const isLive = key === liveKey
+            const kind = isDone ? 'past' : isLive ? '' : 'next'
+            const isOpen = key === open && kind !== 'next'
+            const toggle = () => setOpenKey(key === open ? liveKey : key)
             return (
-              <div key={key} className={`card pad${isLive ? ' glow' : ''}`}
-                style={upcoming ? { opacity: 0.5 } : undefined}>
-                <div className="row" style={{ gap: 13, marginBottom: isLive ? 14 : 0 }}>
-                  <span className="mono" style={{
-                    fontSize: 11, fontWeight: 700,
-                    color: upcoming ? 'var(--ink-400)' : meta.color,
-                  }}>{meta.n}</span>
-                  <div style={{ flex: 1 }}>
-                    <div className="h3" style={upcoming ? { color: 'var(--mute)' } : undefined}>{meta.label}</div>
-                    <div style={{ fontSize: 12.5, color: 'var(--mute)', marginTop: 2 }}>
-                      {s.clientNote || '—'}
-                    </div>
-                  </div>
-                  {isLive && <Chip tone="c-prog" live>{s.progressPct}%</Chip>}
-                  {isDone && <Chip tone="c-done">Complete</Chip>}
-                  {(isDone || isLive) && s.assetCount > 0 && (
-                    <button className="btn btn-g sm">{s.assetCount} files</button>
-                  )}
+              <div key={key} className={`stage-node ${kind}${isOpen ? ' open' : ''}`} style={{ '--c': m.color }}>
+                <button className="dot" onClick={kind === 'next' ? undefined : toggle} disabled={kind === 'next'}>{m.n}</button>
+                <div className="stage-head">
+                  <h2 role={kind === 'next' ? undefined : 'button'} tabIndex={kind === 'next' ? -1 : 0}
+                    onClick={kind === 'next' ? undefined : toggle}
+                    onKeyDown={(e) => { if (kind !== 'next' && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); toggle() } }}>
+                    {m.label}
+                  </h2>
+                  <span className="when">
+                    {isDone && `done${st.completedAt ? ' · ' + longDate(st.completedAt) : ''}`}
+                    {isLive && !isDone && `${st.progressPct ?? 0}% · now`}
+                    {kind === 'next' && (key === 'LAUNCH' && p.estLaunchAt ? `around ${longDate(p.estLaunchAt)}` : 'coming up')}
+                  </span>
                 </div>
+
+                {isOpen ? (
+                  <>
+                    <div className="update" id={isLive ? 'reply' : undefined}>
+                      {st.clientNote?.trim() ? (
+                        <>
+                          <div className="byline">
+                            <span><b>{developer}</b>{st.startedAt ? ` · ${longDate(st.startedAt)}` : ''}</span>
+                          </div>
+                          <Prose source={st.clientNote} />
+                        </>
+                      ) : (
+                        <div className="prose-empty">
+                          {isLive ? `${developer} is working on this stage. An update will appear here.` : 'No update was written for this stage.'}
+                        </div>
+                      )}
+                    </div>
+                    <StageThread projectId={p.id} stageKey={key} counterpart={developer} />
+                  </>
+                ) : (
+                  kind !== 'next' && (
+                    <div className="recap">
+                      {firstLine(st.clientNote) || <span style={{ fontStyle: 'italic' }}>No update for this stage.</span>}
+                      <button onClick={toggle}>Read</button>
+                    </div>
+                  )
+                )}
               </div>
             )
           })}
