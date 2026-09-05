@@ -73,6 +73,9 @@ export const EP = {
   adminContactInvite: (contactId) =>
     `/v1/admin/organizations/contacts/${contactId}/invite`,
 
+  // The thread under a stage update. Both sides read and write it.
+  stageMessages: (projectId, stageKey) => `/v1/projects/${projectId}/stages/${stageKey}/messages`,
+
   // Deleting a client. The preview feeds the confirmation dialog's numbers; the
   // delete is a POST because it carries a body (password + retyped name) and a
   // DELETE-with-body has to survive the Netlify proxy hop.
@@ -164,6 +167,9 @@ export const BILLING_DISPOSITION = {
   BILLABLE: 'Billable',
   DECLINED: 'Declined',
 }
+
+/** Who the client is talking to. One place to change when agents start posting. */
+export const DEVELOPER_NAME = 'Charles'
 
 /** Roles. The backend bootstraps an ADMIN; CLIENT is the portal role. */
 export const ROLE = { CLIENT: 'CLIENT', AGENT: 'AGENT', PM: 'PM', ADMIN: 'ADMIN', OWNER: 'OWNER' }
@@ -322,6 +328,13 @@ export const adaptRequest = (raw) => withRefNumber(raw)
 
 export const adaptRequests = (raw) => ({
   items: (Array.isArray(raw) ? raw : (raw?.items || [])).map(withRefNumber),
+})
+
+/** GET /v1/projects/{id}/stages/{key}/messages — {stageId, items[], clientLastReadAt}. */
+export const adaptThread = (raw) => ({
+  stageId: raw?.stageId ?? null,
+  items: Array.isArray(raw?.items) ? raw.items : [],
+  clientLastReadAt: raw?.clientLastReadAt ?? null,
 })
 
 /**
