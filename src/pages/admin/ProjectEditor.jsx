@@ -3,6 +3,10 @@ import { useParams, Link } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
 import { patch, post } from '../../lib/api'
 import { EP, STAGES, STAGE_META, STAGE_STATUS, adaptProject, adaptAssets, isImage } from '../../lib/endpoints'
+import Prose, { firstLine } from '../../lib/markdown'
+import StageThread from '../../components/StageThread'
+import { useAuth } from '../../auth/AuthProvider'
+import { ago } from '../../lib/format'
 import { longDate, bytes } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import StageRail from '../../components/StageRail'
@@ -32,6 +36,9 @@ export default function ProjectEditor() {
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState(null)
   const [saved, setSaved] = useState(false)
+  const [tab, setTab] = useState('write')
+  const [clientRead, setClientRead] = useState(null)
+  const { user } = useAuth()
 
   const active = stageKey || project?.currentStage
   const stage = (project?.stages || []).find((s) => s.stageKey === active)
@@ -102,6 +109,10 @@ export default function ProjectEditor() {
 
   const files = assets.data?.items || []
 
+  const contactName = project.orgName || 'your client'
+  const live = (project.stages || []).find((s) => s.stageKey === project.currentStage)
+  const activeMeta = STAGE_META[active] || {}
+
   return (
     <>
       <TopBar crumbs={[
@@ -115,84 +126,122 @@ export default function ProjectEditor() {
       </TopBar>
 
       <div className="wrap wide">
-        <div className="spread" style={{ marginBottom: 18, alignItems: 'flex-end', flexWrap: 'wrap', gap: 14 }}>
+        <div className="proj-head">
           <div>
-            <div className="eyebrow">Project editor</div>
-            <h1 className="h1" style={{ marginTop: 6 }}>{project.name}</h1>
+            <h1>{project.name}</h1>
+            <div className="sub">
+              In {STAGE_META[project.currentStage]?.label?.toLowerCase()}
+              {live && <> · <b>{live.progressPct ?? 0}%</b></>}
+              {project.estLaunchAt && <> · launch <b>{longDate(project.estLaunchAt)}</b></>}
+              {clientRead && <> · {contactName} last read this <b>{ago(clientRead)}</b></>}
+            </div>
           </div>
-          <div className="note amber" style={{ maxWidth: 400, fontSize: 12.5, padding: '9px 12px' }}>
-            Your client sees every change here the moment you save. Nothing is staged.
-          </div>
+          {next && (
+            <button className="btn btn-s push" onClick={advance} disabled={saving}>
+              Advance to {STAGE_META[next].label}
+            </button>
+          )}
         </div>
 
         {saveError && <div style={{ marginBottom: 16 }}><ErrorNote error={saveError} /></div>}
 
-        <div className="card pad" style={{ marginBottom: 16 }}>
-          <div className="spread" style={{ marginBottom: 16 }}>
-            <span className="eyebrow">Stage control</span>
-            {next && (
-              <button className="btn btn-p sm" onClick={advance} disabled={saving}>
-                Advance to {STAGE_META[next].label} →
-              </button>
-            )}
-          </div>
+        <StageRail stages={project.stages} currentStage={project.currentStage} bare />
 
-          <StageRail stages={project.stages} currentStage={project.currentStage} bare />
-
-          {/* Pick any stage to edit, not just the live one — you often need to
-              fix a note on a stage that already closed. */}
-          <div className="row" style={{ gap: 6, marginTop: 18, flexWrap: 'wrap' }}>
-            {STAGES.map((k) => (
-              <button key={k} onClick={() => setStageKey(k)}
-                className={`chip ${k === active ? 'c-prog' : 'c-done'}`} style={{ cursor: 'pointer' }}>
-                {STAGE_META[k].n} {STAGE_META[k].label}
-              </button>
-            ))}
-          </div>
-
-          <div className="hr" />
-
-          <div className="grid g3">
-            <div>
-              <label className="lbl">{STAGE_META[active]?.label} progress</label>
-              <div className="row" style={{ gap: 10 }}>
-                <input className="inp mono" style={{ width: 66, textAlign: 'center' }} type="number" min="0" max="100"
-                  value={form.progressPct} onChange={(e) => setForm((f) => ({ ...f, progressPct: e.target.value }))} />
-                <span style={{ fontSize: 13, color: 'var(--mute)' }}>%</span>
-                <div style={{ flex: 1, height: 6, background: 'var(--ink-200)', borderRadius: 3, overflow: 'hidden' }}>
-                  <div style={{ width: `${Math.min(100, form.progressPct)}%`, height: '100%', background: STAGE_META[active]?.color, borderRadius: 3 }} />
-                </div>
-              </div>
-            </div>
-            <div>
-              <label className="lbl">Est. launch date</label>
-              <input type="date" className="inp mono" value={meta.estLaunchOn}
-                onChange={(e) => setMeta((m) => ({ ...m, estLaunchOn: e.target.value }))} />
-            </div>
-            <div>
-              <label className="lbl">Preview URL</label>
-              <input className="inp mono" style={{ fontSize: 12 }} value={meta.previewUrl}
-                onChange={(e) => setMeta((m) => ({ ...m, previewUrl: e.target.value }))} />
+        <div className="ctl-strip" style={{ '--c': activeMeta.color }}>
+          <div className="ctl">
+            <label>{activeMeta.label} progress</label>
+            <div className="pct">
+              <input type="range" min="0" max="100" value={form.progressPct}
+                onChange={(e) => setForm((f) => ({ ...f, progressPct: e.target.value }))} />
+              <input className="inp mono" type="number" min="0" max="100" value={form.progressPct}
+                onChange={(e) => setForm((f) => ({ ...f, progressPct: e.target.value }))} />
             </div>
           </div>
-
-          <div className="grid g2" style={{ marginTop: 16 }}>
-            <div>
-              <label className="lbl">What the client reads on this stage</label>
-              <textarea className="inp" rows={3} style={{ resize: 'vertical' }}
-                value={form.clientNote} onChange={(e) => setForm((f) => ({ ...f, clientNote: e.target.value }))} />
-            </div>
-            <div>
-              <label className="lbl">
-                Internal note <span style={{ color: 'var(--amber)' }}>· never shown to the client</span>
-              </label>
-              <textarea className="inp" rows={3} style={{ resize: 'vertical', borderColor: 'rgba(245,158,11,.25)' }}
-                value={form.internalNote} onChange={(e) => setForm((f) => ({ ...f, internalNote: e.target.value }))} />
-            </div>
+          <div className="ctl">
+            <label>Estimated launch</label>
+            <input type="date" className="inp mono" value={meta.estLaunchOn}
+              onChange={(e) => setMeta((m) => ({ ...m, estLaunchOn: e.target.value }))} />
+          </div>
+          <div className="ctl">
+            <label>Preview link</label>
+            <input className="inp mono" style={{ fontSize: 12 }} value={meta.previewUrl} placeholder="https://"
+              onChange={(e) => setMeta((m) => ({ ...m, previewUrl: e.target.value }))} />
           </div>
         </div>
 
-        <div className="card pad">
+        {/* The story: one node per stage. Click any node to edit that stage —
+            you often need to fix a note on one that already closed. */}
+        <div className="story">
+          {[...STAGES].reverse().map((key) => {
+            const m = STAGE_META[key]
+            const st = (project.stages || []).find((s) => s.stageKey === key) || {}
+            const isOpen = key === active
+            const isDone = st.status === STAGE_STATUS.COMPLETE
+            const isLive = key === project.currentStage
+            const kind = isDone ? 'past' : isLive ? '' : 'next'
+            return (
+              <div key={key} className={`stage-node ${kind}${isOpen ? ' open' : ''}`} style={{ '--c': m.color }}>
+                <button className="dot" onClick={() => { setStageKey(key); setTab('write') }} title={`Edit ${m.label}`}>{m.n}</button>
+                <div className="stage-head">
+                  <h2 role="button" tabIndex={0} onClick={() => { setStageKey(key); setTab('write') }}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setStageKey(key); setTab('write') } }}>{m.label}</h2>
+                  <span className="when">
+                    {isDone && `complete${st.completedAt ? ' · ' + longDate(st.completedAt) : ''}`}
+                    {isLive && !isDone && `${st.progressPct ?? 0}% · now`}
+                    {kind === 'next' && (key === 'LAUNCH' && project.estLaunchAt ? `estimated ${longDate(project.estLaunchAt)}` : 'upcoming')}
+                  </span>
+                </div>
+
+                {isOpen ? (
+                  <>
+                    <div className="editor">
+                      <div className="tabs">
+                        <button className={tab === 'write' ? 'on' : ''} onClick={() => setTab('write')}>Write</button>
+                        <button className={tab === 'preview' ? 'on' : ''} onClick={() => setTab('preview')}>Preview</button>
+                        <span className="hint">Headings, lists and links render for {contactName}. Start a line with ! for something you need from them.</span>
+                      </div>
+                      {tab === 'write' ? (
+                        <textarea value={form.clientNote}
+                          placeholder={`What changed, what you need from ${contactName}, what's next.\n\nWrite it the way you'd say it on the phone.`}
+                          onChange={(e) => setForm((f) => ({ ...f, clientNote: e.target.value }))} />
+                      ) : (
+                        <div className="preview">
+                          {form.clientNote.trim()
+                            ? <Prose source={form.clientNote} />
+                            : <div className="prose-empty">Nothing written yet.</div>}
+                        </div>
+                      )}
+                      <div className="foot">
+                        <span>{contactName} sees this the moment you save. Nothing is staged.</span>
+                        <button className="btn btn-p sm" style={{ marginLeft: 'auto' }} onClick={save} disabled={saving}>
+                          {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save changes'}
+                        </button>
+                      </div>
+                    </div>
+
+                    <StageThread projectId={id} stageKey={key} counterpart={contactName}
+                      onLoaded={(t) => setClientRead(t.clientLastReadAt)} />
+
+                    <div className="internal">
+                      <label>Internal note — never shown to {contactName}</label>
+                      <textarea value={form.internalNote} placeholder="Decisions, gotchas, things to remember."
+                        onChange={(e) => setForm((f) => ({ ...f, internalNote: e.target.value }))} />
+                    </div>
+                  </>
+                ) : (
+                  kind !== 'next' && (
+                    <div className="recap">
+                      {firstLine(st.clientNote) || <span style={{ fontStyle: 'italic' }}>No update written.</span>}
+                      <button onClick={() => { setStageKey(key); setTab('write') }}>Open</button>
+                    </div>
+                  )
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        <div className="card pad" style={{ marginTop: 8 }}>
           <div className="spread" style={{ marginBottom: 15 }}>
             <div>
               <span className="eyebrow">Files on this project</span>
