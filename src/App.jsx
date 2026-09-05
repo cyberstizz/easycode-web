@@ -90,7 +90,7 @@ export default function App() {
             <Route path="clients/:id" element={<ClientDetail />} />
             <Route path="projects" element={<Projects />} />
             <Route path="projects/:id" element={<ProjectEditor />} />
-            <Route path="invoices" element={<ProtectedRoute owner><Placeholder title="Invoices" /></ProtectedRoute>} />
+            <Route path="invoices" element={<ProtectedRoute owner><Placeholder title="Invoices" note="Billing is waiting on Stripe account recovery. Invoices already show on each client's page under Billing." /></ProtectedRoute>} />
             <Route path="agents" element={<ProtectedRoute owner><Placeholder title="Agents" /></ProtectedRoute>} />
           </Route>
 
