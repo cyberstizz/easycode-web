@@ -408,7 +408,34 @@ a{color:inherit}
 .mrule{display:flex;align-items:baseline;gap:14px;margin-bottom:34px}
 .mrule .rule{flex:1;height:1px;background:var(--ink-200)}
 
-.hero{position:relative;overflow:hidden;padding:84px 0 68px;min-height:660px;display:flex;align-items:center}
+.hero{
+  position:relative;overflow:hidden;padding:84px 0 68px;min-height:660px;
+  display:flex;align-items:center;
+
+  /* Everest sits on the element's own background, not a pseudo-element, so it
+     paints beneath every positioned child — the globe (z-index 0) and the copy
+     (z-index 2) both stay exactly where they were.
+
+     Two scrims over it, listed above the image because the first layer is the
+     topmost. The horizontal one keeps the left column at full page-black so the
+     headline and lede have the same contrast they had on a flat background; the
+     right side stays light enough to read as a mountain. The vertical one only
+     works at the bottom, fading into --ink-000 so the hero doesn't cut off with
+     a hard seam against the section beneath it. */
+  background-image:
+    linear-gradient(180deg,
+      transparent 0%, transparent 58%,
+      rgba(8,9,11,.62) 84%, var(--ink-000) 100%),
+    linear-gradient(90deg,
+      rgba(8,9,11,.95) 0%, rgba(8,9,11,.93) 40%,
+      rgba(8,9,11,.88) 58%, rgba(8,9,11,.50) 80%,
+      rgba(8,9,11,.30) 100%),
+    image-set(url('/Mount-Everest.webp') type('image/webp'),
+              url('/Mount-Everest.jpg')  type('image/jpeg'));
+  background-size:cover;
+  background-position:center 32%;
+  background-repeat:no-repeat;
+}
 .hero::before{
   content:"";position:absolute;inset:-10% -20% auto;height:520px;pointer-events:none;
   background:radial-gradient(ellipse 46% 58% at 50% 0%,rgba(16,185,129,.115),transparent 68%);
@@ -461,7 +488,19 @@ a{color:inherit}
 @media (max-width:900px){
   .pnav-links{display:none}
   .msec{padding:54px 0}
-  .hero{padding:56px 0 46px;min-height:0;display:block}
+  .hero{
+    padding:56px 0 46px;min-height:0;display:block;
+    /* Copy runs the full width here, so a left-to-right scrim would leave the
+       last words of every line sitting on snow. Flat wash instead, and pull the
+       framing right so the summit isn't cropped out by a narrow viewport. */
+    background-image:
+      linear-gradient(180deg,
+        rgba(8,9,11,.90) 0%, rgba(8,9,11,.86) 55%,
+        rgba(8,9,11,.93) 82%, var(--ink-000) 100%),
+      image-set(url('/Mount-Everest.webp') type('image/webp'),
+                url('/Mount-Everest.jpg')  type('image/jpeg'));
+    background-position:58% 28%;
+  }
 }
 @media (max-width:680px){
   .mwrap{padding:0 15px}
@@ -749,3 +788,50 @@ a{color:inherit}
   .prose{font-size:16px}
   .needs{flex-wrap:wrap}.needs .push{margin-left:0;width:100%}
 }
+/* ══════════════════════════════════════════════════════════════
+   ══════════════════════════════════════════════════════════════ */
+.chk{margin-top:8px}
+.chk-bar{height:3px;border-radius:2px;background:var(--ink-200);overflow:hidden;margin-bottom:6px}
+.chk-bar-fill{height:100%;background:var(--em);transition:width .25s ease}
+
+.chk-stage{border-bottom:1px solid var(--ink-150)}
+.chk-stage:last-of-type{border-bottom:0}
+.chk-stage-head{display:flex;align-items:center;gap:10px;width:100%;padding:11px 2px;text-align:left}
+.chk-stage-head:hover .chk-stage-name{color:var(--white)}
+.chk-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.chk-stage-name{font-size:13.5px;font-weight:600;color:var(--text)}
+.chk-now{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--em-hi);background:var(--em-dim);padding:2px 6px;border-radius:4px}
+.chk-count{margin-left:auto;font-size:11.5px;color:var(--mute)}
+
+.chk-items{padding:2px 0 12px}
+.chk-item{display:grid;grid-template-columns:18px 1fr;gap:10px;padding:7px 0 7px 2px}
+.chk-box{width:16px;height:16px;margin-top:2px;border-radius:5px;border:1.5px solid var(--ink-300);
+  display:grid;place-items:center;color:#04120c;flex-shrink:0}
+.chk-box:hover{border-color:var(--mute)}
+.chk-item.done .chk-box{background:var(--em);border-color:var(--em)}
+.chk-title{font-size:13.5px;line-height:1.45;color:var(--text)}
+.chk-title.em{font-weight:600;color:var(--white)}
+.chk-item.done .chk-title{color:var(--mute);text-decoration:line-through;text-decoration-color:var(--ink-300)}
+.chk-item.done .chk-title.em{font-weight:500;color:var(--mute)}
+.chk-guide{font-size:12px;line-height:1.5;color:var(--mute);margin-top:3px}
+.chk-item.done .chk-guide{color:var(--ink-400)}
+.chk-meta{font-size:11px;color:var(--ink-400);margin-top:4px}
+
+.chk-note{display:block;text-align:left;font-size:12.5px;line-height:1.5;color:var(--mute-hi);
+  margin-top:7px;padding:8px 10px;border-left:2px solid var(--ink-300);background:var(--ink-000);
+  border-radius:0 7px 7px 0;white-space:pre-wrap;width:100%}
+.chk-note:hover{border-left-color:var(--em)}
+.chk-add-note{font-size:11.5px;color:var(--ink-400);margin-top:5px;padding:0}
+.chk-add-note:hover{color:var(--em-hi)}
+.chk-note-edit{margin-top:8px}
+.chk-note-edit textarea{width:100%;min-height:64px;resize:vertical;background:var(--ink-000);
+  border:1px solid var(--ink-200);border-radius:8px;padding:9px 11px;color:var(--text);
+  font:inherit;font-size:13px;line-height:1.5;outline:none}
+.chk-note-edit textarea:focus{border-color:var(--ink-300)}
+
+.chk-foot{display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+  margin-top:14px;padding-top:12px;border-top:1px solid var(--ink-150)}
+.chk-foot span{font-size:12px;color:var(--amber);flex:1;min-width:180px}
+.chk-swap{font-size:11.5px;color:var(--ink-400)}
+.chk-swap:hover{color:var(--mute-hi)}

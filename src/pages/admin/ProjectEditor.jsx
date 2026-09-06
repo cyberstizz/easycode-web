@@ -5,6 +5,7 @@ import { patch, post } from '../../lib/api'
 import { EP, STAGES, STAGE_META, STAGE_STATUS, adaptProject, adaptAssets, isImage } from '../../lib/endpoints'
 import Prose, { firstLine } from '../../lib/markdown'
 import StageThread from '../../components/StageThread'
+import ChecklistPanel from '../../components/ChecklistPanel'
 import { useAuth } from '../../auth/AuthProvider'
 import { ago } from '../../lib/format'
 import { longDate, bytes } from '../../lib/format'
@@ -240,6 +241,8 @@ export default function ProjectEditor() {
             )
           })}
         </div>
+
+        <ChecklistPanel projectId={id} currentStage={project.currentStage} />
 
         <div className="card pad" style={{ marginTop: 8 }}>
           <div className="spread" style={{ marginBottom: 15 }}>

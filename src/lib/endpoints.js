@@ -73,6 +73,11 @@ export const EP = {
   adminContactInvite: (contactId) =>
     `/v1/admin/organizations/contacts/${contactId}/invite`,
 
+  // Internal delivery checklist. Staff-only — there is no portal equivalent.
+  projectChecklist: (projectId) => `/v1/admin/projects/${projectId}/checklist`,
+  checklistItem: (itemId) => `/v1/admin/checklist-items/${itemId}`,
+  checklistTemplates: () => '/v1/admin/checklist-templates',
+
   // The thread under a stage update. Both sides read and write it.
   stageMessages: (projectId, stageKey) => `/v1/projects/${projectId}/stages/${stageKey}/messages`,
 
@@ -328,6 +333,14 @@ export const adaptRequest = (raw) => withRefNumber(raw)
 
 export const adaptRequests = (raw) => ({
   items: (Array.isArray(raw) ? raw : (raw?.items || [])).map(withRefNumber),
+})
+
+/** GET /v1/admin/projects/{id}/checklist — {items[], stages[], done, total}. */
+export const adaptChecklist = (raw) => ({
+  items: Array.isArray(raw?.items) ? raw.items : [],
+  stages: Array.isArray(raw?.stages) ? raw.stages : [],
+  done: raw?.done ?? 0,
+  total: raw?.total ?? 0,
 })
 
 /** GET /v1/projects/{id}/stages/{key}/messages — {stageId, items[], clientLastReadAt}. */
