@@ -26,6 +26,7 @@ import NewLead from './pages/admin/NewLead'
 import RequestsInbox from './pages/admin/RequestsInbox'
 import Clients from './pages/admin/Clients'
 import Projects from './pages/admin/Projects'
+import Invoices from './pages/admin/Invoices'
 import ClientDetail from './pages/admin/ClientDetail'
 import ProjectEditor from './pages/admin/ProjectEditor'
 
@@ -33,6 +34,9 @@ import Overview from './pages/portal/Overview'
 import NewRequest from './pages/portal/NewRequest'
 import Files from './pages/portal/Files'
 import Settings from './pages/portal/Settings'
+import Billing from './pages/portal/Billing'
+import Invoice from './pages/portal/Invoice'
+import PayInvoice from './pages/portal/PayInvoice'
 import Project from './pages/portal/Project'
 import Requests from './pages/portal/Requests'
 import RequestDetail from './pages/portal/RequestDetail'
@@ -70,9 +74,9 @@ export default function App() {
             <Route path="requests/new" element={<NewRequest />} />
             <Route path="requests/:id" element={<RequestDetail />} />
             <Route path="files" element={<Files />} />
-            <Route path="billing" element={<Placeholder title="Billing" />} />
-            <Route path="invoices/:id" element={<Placeholder title="Invoice" />} />
-            <Route path="invoices/:id/pay" element={<Placeholder title="Pay invoice" />} />
+            <Route path="billing" element={<Billing />} />
+            <Route path="invoices/:id" element={<Invoice />} />
+            <Route path="invoices/:id/pay" element={<PayInvoice />} />
             <Route path="settings" element={<Settings />} />
           </Route>
 
@@ -90,7 +94,7 @@ export default function App() {
             <Route path="clients/:id" element={<ClientDetail />} />
             <Route path="projects" element={<Projects />} />
             <Route path="projects/:id" element={<ProjectEditor />} />
-            <Route path="invoices" element={<ProtectedRoute owner><Placeholder title="Invoices" note="Billing is waiting on Stripe account recovery. Invoices already show on each client's page under Billing." /></ProtectedRoute>} />
+            <Route path="invoices" element={<ProtectedRoute owner><Invoices /></ProtectedRoute>} />
             <Route path="agents" element={<ProtectedRoute owner><Placeholder title="Agents" /></ProtectedRoute>} />
           </Route>
 

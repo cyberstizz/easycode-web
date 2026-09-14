@@ -86,7 +86,7 @@ export default function ClientDetail() {
     <>
       <TopBar crumbs={[{ label: 'Clients', to: '/admin/clients' }, { label: org.name }]}>
         <button className="btn btn-s sm">Log a call</button>
-        <button className="btn btn-p sm">New invoice</button>
+        <Link to={`/admin/invoices?orgId=${id}`} className="btn btn-p sm" style={{ textDecoration: 'none' }}>New invoice</Link>
       </TopBar>
 
       <div className="wrap wide">
