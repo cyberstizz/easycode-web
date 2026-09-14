@@ -57,6 +57,8 @@ export const EP = {
   invoice: (id) => `/v1/invoices/${id}`,
   invoicePaymentIntent: (id) => `/v1/invoices/${id}/payment-intent`,
   setupIntent: () => '/v1/billing/setup-intent',
+  billingCard: () => '/v1/billing/card',
+  plans: () => '/v1/plans',
   subscriptions: () => '/v1/subscriptions',
 
   // ── admin ─────────────────────────────────────────────────
@@ -334,6 +336,72 @@ export const adaptRequest = (raw) => withRefNumber(raw)
 export const adaptRequests = (raw) => ({
   items: (Array.isArray(raw) ? raw : (raw?.items || [])).map(withRefNumber),
 })
+
+/** Backend enums for billing, verified against com.easycode.api.domain.enums. */
+export const INVOICE_KIND = {
+  DEPOSIT: 'DEPOSIT', MILESTONE: 'MILESTONE', CHANGE_ORDER: 'CHANGE_ORDER',
+  SUBSCRIPTION: 'SUBSCRIPTION', ONE_OFF: 'ONE_OFF',
+}
+export const INVOICE_KIND_LABEL = {
+  DEPOSIT: 'Deposit', MILESTONE: 'Milestone', CHANGE_ORDER: 'Change order',
+  SUBSCRIPTION: 'Maintenance', ONE_OFF: 'One-off',
+}
+export const SUBSCRIPTION_STATUS = {
+  INCOMPLETE: 'INCOMPLETE', ACTIVE: 'ACTIVE', PAST_DUE: 'PAST_DUE',
+  CANCELED: 'CANCELED', UNPAID: 'UNPAID', TRIALING: 'TRIALING',
+}
+
+/** Chip tone for an invoice status — one place, so every list agrees. */
+export const invoiceTone = (status, dueAt) => {
+  if (status === 'PAID') return 'c-new'
+  if (status === 'VOID' || status === 'UNCOLLECTIBLE') return 'c-done'
+  if (status === 'DRAFT') return 'c-done'
+  if (dueAt && new Date(dueAt) < new Date()) return 'c-late'
+  return 'c-you'
+}
+export const invoiceLabel = (status, dueAt) => {
+  if (status === 'PAID') return 'Paid'
+  if (status === 'VOID') return 'Void'
+  if (status === 'UNCOLLECTIBLE') return 'Written off'
+  if (status === 'DRAFT') return 'Draft'
+  if (dueAt && new Date(dueAt) < new Date()) return 'Overdue'
+  return 'Due'
+}
+
+/**
+ * InvoiceView — amountCents / amountPaidCents / balanceCents / memo / dueAt.
+ * Not totalCents, not description, not dueOn. The handoff warned about exactly
+ * this trio, so the adapter also derives the fields the older pages read.
+ */
+export const adaptInvoice = (raw) => !raw ? raw : ({
+  ...raw,
+  lines: Array.isArray(raw.lines) ? raw.lines : [],
+  // Derived, for anything still reading the old names:
+  totalCents: raw.amountCents,
+  description: raw.memo,
+  dueOn: raw.dueAt,
+  payable: raw.status === 'OPEN' && (raw.balanceCents ?? 0) > 0,
+})
+
+/** GET /v1/billing/summary — {amountDueCents, invoices[], subscriptions[], plans[]}. */
+export const adaptBillingSummary = (raw) => ({
+  amountDueCents: raw?.amountDueCents ?? 0,
+  invoices: (raw?.invoices || []).map(adaptInvoice),
+  subscriptions: raw?.subscriptions || [],
+  plans: raw?.plans || [],
+  activeSubscription: (raw?.subscriptions || []).find((s) =>
+    ['ACTIVE', 'TRIALING', 'PAST_DUE'].includes(s.status)) || null,
+})
+
+/** POST /v1/invoices/{id}/payment-intent — {clientSecret, intentId, amountCents}. */
+export const adaptIntent = (raw) => ({
+  clientSecret: raw?.clientSecret || null,
+  intentId: raw?.intentId || null,
+  amountCents: raw?.amountCents ?? 0,
+})
+
+/** GET /v1/billing/card — {card: {brand,last4,expMonth,expYear} | null}. */
+export const adaptCard = (raw) => raw?.card || null
 
 /** GET /v1/admin/projects/{id}/checklist — {items[], stages[], done, total}. */
 export const adaptChecklist = (raw) => ({
