@@ -75,6 +75,12 @@ export const EP = {
   adminContactInvite: (contactId) =>
     `/v1/admin/organizations/contacts/${contactId}/invite`,
 
+  // Maintenance. The /admin paths carry due dates; the portal path never does.
+  maintenanceBoard: (horizon = 14) => `/v1/admin/maintenance?horizon=${horizon}`,
+  projectMaintenance: (projectId) => `/v1/admin/projects/${projectId}/maintenance`,
+  completeVisit: (visitId) => `/v1/admin/maintenance/visits/${visitId}/complete`,
+  maintenanceReports: (projectId) => `/v1/projects/${projectId}/maintenance-reports`,
+
   // Internal delivery checklist. Staff-only — there is no portal equivalent.
   projectChecklist: (projectId) => `/v1/admin/projects/${projectId}/checklist`,
   checklistItem: (itemId) => `/v1/admin/checklist-items/${itemId}`,
@@ -402,6 +408,48 @@ export const adaptIntent = (raw) => ({
 
 /** GET /v1/billing/card — {card: {brand,last4,expMonth,expYear} | null}. */
 export const adaptCard = (raw) => raw?.card || null
+
+/**
+ * GET /v1/admin/maintenance — the week board.
+ *
+ * Buckets come from the server already sorted; the adapter only guarantees the
+ * arrays exist so the page can map without guarding every one. `dueOn` is a
+ * plain YYYY-MM-DD date, not an Instant — don't run it through new Date()
+ * without a time, or a US timezone shifts it to the previous day.
+ */
+export const adaptMaintenanceBoard = (raw) => ({
+  today: raw?.today || null,
+  overdue: raw?.overdue || [],
+  dueToday: raw?.dueToday || [],
+  thisWeek: raw?.thisWeek || [],
+  later: raw?.later || [],
+  activeSchedules: raw?.activeSchedules ?? 0,
+  get openCount() {
+    return this.overdue.length + this.dueToday.length + this.thisWeek.length
+  },
+})
+
+/** A YYYY-MM-DD from the server, rendered without timezone drift. */
+export const dayLabel = (ymd, opts = { month: 'short', day: 'numeric' }) => {
+  if (!ymd) return '—'
+  const [y, m, d] = ymd.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', opts)
+}
+export const dayOfWeek = (ymd) => {
+  if (!ymd) return ''
+  const [y, m, d] = ymd.split('-').map(Number)
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'short' })
+}
+
+/** GET /v1/admin/projects/{id}/maintenance — {schedule, open, history[]}. */
+export const adaptProjectMaintenance = (raw) => ({
+  schedule: raw?.schedule || null,
+  open: raw?.open || null,
+  history: raw?.history || [],
+})
+
+/** GET /v1/projects/{id}/maintenance-reports — completed only, no due dates. */
+export const adaptMaintenanceReports = (raw) => (Array.isArray(raw?.items) ? raw.items : [])
 
 /** GET /v1/admin/projects/{id}/checklist — {items[], stages[], done, total}. */
 export const adaptChecklist = (raw) => ({

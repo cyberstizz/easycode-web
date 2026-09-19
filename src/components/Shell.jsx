@@ -11,6 +11,7 @@ const I = {
   card: <><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20" /></>,
   gear: <><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 008 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H2a2 2 0 110-4h.09A1.65 1.65 0 004.6 8a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 3.6 1.65 1.65 0 0010 2.09V2a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 8c.14.36.44.63.81.74" /></>,
   clock: <><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></>,
+  wrench: <path d="M14.7 6.3a4 4 0 01-5.4 5.4L4 17v3h3l5.3-5.3a4 4 0 015.4-5.4l-2.6 2.6-2-2z" />,
   inbox: <><path d="M22 12h-6l-2 3h-4l-2-3H2" /><path d="M5.45 5.11L2 12v6a2 2 0 002 2h16a2 2 0 002-2v-6l-3.45-6.89A2 2 0 0016.76 4H7.24a2 2 0 00-1.79 1.11z" /></>,
   rows: <path d="M3 5h18M3 12h18M3 19h18" />,
   users: <><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /></>,
@@ -75,6 +76,7 @@ export default function Shell({ counts = {} }) {
               <div className="rail-label">Book of business</div>
               <Item to="/admin/clients" icon={I.users} label="Clients" count={counts.clients} onNavigate={close} />
               <Item to="/admin/projects" icon={I.pulse} label="Projects" count={counts.projects} onNavigate={close} />
+              <Item to="/admin/maintenance" icon={I.wrench} label="Maintenance" count={counts.maintenanceDue} hot onNavigate={close} />
               {isOwner && <Item to="/admin/invoices" icon={I.card} label="Invoices" count={counts.invoices} onNavigate={close} />}
             </div>
             {isOwner && (

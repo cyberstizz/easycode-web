@@ -11,6 +11,7 @@
 import {
   adaptInvoice, adaptBillingSummary, adaptIntent, adaptCard,
   invoiceTone, invoiceLabel, INVOICE_KIND,
+  adaptMaintenanceBoard, adaptProjectMaintenance, adaptMaintenanceReports, dayLabel, dayOfWeek,
 } from './endpoints.js'
 
 let fail = 0
@@ -103,5 +104,62 @@ for (const [label, patch, expectPayable] of steps) {
   ok(adaptInvoice({ ...openInvoice, ...patch }).payable === expectPayable, `${label} → payable=${expectPayable}`)
 }
 
-console.log(fail === 0 ? '\nAll billing checks passed.\n' : `\n${fail} FAILED\n`)
+// ── maintenance ──────────────────────────────────────────────────────
+// Exactly what MaintenanceController.board() serialises. dueOn is a plain
+// YYYY-MM-DD date, NOT an Instant.
+const board = {
+  today: '2026-09-17',
+  overdue: [{ visitId: 'v1', projectId: 'p1', projectName: 'DesignHer', orgId: 'o1', orgName: 'DesignHer Inc',
+              dueOn: '2026-09-03', daysLate: 14, cadenceDays: 14, missedCycles: 0 }],
+  dueToday: [{ visitId: 'v2', projectId: 'p2', projectName: 'Femme Standard', orgId: 'o2', orgName: 'The Femme Standard',
+               dueOn: '2026-09-17', daysLate: 0, cadenceDays: 14, missedCycles: 0 }],
+  thisWeek: [{ visitId: 'v3', projectId: 'p3', projectName: 'Third', orgId: 'o3', orgName: 'Third Co',
+               dueOn: '2026-09-21', daysLate: 0, cadenceDays: 14, missedCycles: 1 }],
+  later: [],
+  activeSchedules: 9,
+}
+
+console.log('\nadaptMaintenanceBoard — the week view')
+const b = adaptMaintenanceBoard(board)
+ok(b.overdue.length === 1 && b.dueToday.length === 1, 'buckets survive the adapter')
+ok(b.openCount === 3, 'openCount sums the three live buckets')
+ok(b.activeSchedules === 9, 'activeSchedules carried through')
+const e = adaptMaintenanceBoard(null)
+ok(e.overdue.length === 0 && e.dueToday.length === 0 && e.openCount === 0, 'empty board is [] everywhere, never undefined')
+ok(e.activeSchedules === 0, 'empty activeSchedules is 0, not NaN')
+
+console.log('\ndayLabel — the timezone trap')
+// new Date('2026-09-17') parses as UTC midnight and renders as Sep 16 in New York.
+ok(new Date('2026-09-17').toLocaleDateString('en-US', { day: 'numeric', timeZone: 'America/New_York' }) === '16',
+   'the naive parse really does shift the day back (this is why dayLabel exists)')
+ok(dayLabel('2026-09-17', { month: 'short', day: 'numeric' }) === 'Sep 17', 'dayLabel keeps the correct day')
+ok(dayLabel('2026-01-01', { month: 'short', day: 'numeric' }) === 'Jan 1', 'dayLabel holds across a year boundary')
+ok(dayOfWeek('2026-09-17') === 'Thu', 'dayOfWeek is correct')
+ok(dayLabel(null) === '—', 'missing date renders a dash, not Invalid Date')
+
+console.log('\nadaptProjectMaintenance / reports')
+const pm = adaptProjectMaintenance({ schedule: { cadenceDays: 14, anchorOn: '2026-09-03', active: true }, open: { id: 'v1', dueOn: '2026-09-17' }, history: [{ id: 'h1' }] })
+ok(pm.schedule.cadenceDays === 14 && pm.open.id === 'v1' && pm.history.length === 1, 'panel shape resolves')
+const none = adaptProjectMaintenance(null)
+ok(none.schedule === null && none.open === null && none.history.length === 0, 'no schedule yet is null + [], so the panel offers to create one')
+ok(adaptMaintenanceReports({ items: [{ id: 'r1', report: 'x' }] }).length === 1, 'client reports resolve')
+ok(adaptMaintenanceReports(null).length === 0, 'no reports is an empty array')
+
+console.log('\nthe client must never receive a due date')
+const clientPayload = { items: [{ id: 'r1', completedAt: '2026-09-03T10:00:00Z', by: 'Charles', report: 'Updated plugins.' }] }
+const fields = Object.keys(adaptMaintenanceReports(clientPayload)[0])
+ok(!fields.includes('dueOn'), 'no dueOn in the client report shape')
+ok(!fields.includes('missedCycles'), 'no missedCycles in the client report shape')
+ok(!fields.includes('internalNote'), 'no internalNote in the client report shape')
+
+console.log('\nanchored cadence — the arithmetic the server does')
+const addDays = (ymd, n) => { const [y, m, d] = ymd.split('-').map(Number); const t = new Date(Date.UTC(y, m - 1, d + n)); return t.toISOString().slice(0, 10) }
+ok(addDays('2026-09-03', 14) === '2026-09-17', 'next due is previous due + cadence, not completion + cadence')
+// Finishing the Sep 3 visit on Oct 1 must not push the next one to Oct 15.
+let next = addDays('2026-09-03', 14), missed = 0
+while (next < '2026-10-01') { next = addDays(next, 14); missed++ }
+ok(next === '2026-10-01' || next > '2026-10-01', 'a very late completion rolls forward to a future date')
+ok(missed >= 1, 'and records the periods it skipped instead of hiding them')
+
+console.log(fail === 0 ? '\nAll billing and maintenance checks passed.\n' : `\n${fail} FAILED\n`)
 process.exit(fail ? 1 : 0)

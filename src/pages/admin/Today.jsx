@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useApi } from '../../lib/useApi'
-import { EP, LEAD_SOURCE, adaptDue, adaptBoard } from '../../lib/endpoints'
+import { EP, LEAD_SOURCE, adaptDue, adaptBoard, adaptMaintenanceBoard, dayLabel } from '../../lib/endpoints'
 import { daysUntil, money } from '../../lib/format'
 import { TopBar } from '../../components/Shell'
 import Loading from '../../components/Loading'
@@ -52,6 +52,7 @@ function CallRow({ lead, time, tone }) {
 export default function Today() {
   const { data, error, loading, reload } = useApi(EP.adminLeadsDue(), { select: adaptDue })
   const board = useApi(EP.adminLeadsBoard(), { select: adaptBoard })
+  const maint = useApi(EP.maintenanceBoard(7), { select: adaptMaintenanceBoard })
 
   if (loading) return <><TopBar crumbs={[{ label: 'Today' }]} /><div className="wrap wide"><Loading full /></div></>
   if (error) return <><TopBar crumbs={[{ label: 'Today' }]} /><div className="wrap wide"><ErrorNote error={error} onRetry={reload} /></div></>
@@ -106,6 +107,30 @@ export default function Today() {
             </dl>
           </div>
         </div>
+
+        {/* Maintenance owed. Above the call list on purpose: a client already
+            paying you is worth more than a lead who hasn't. */}
+        {(maint.data?.overdue.length > 0 || maint.data?.dueToday.length > 0) && (
+          <Link to="/admin/maintenance" className="card pad today-maint" style={{ textDecoration: 'none', marginBottom: 18 }}>
+            <div>
+              <div className="eyebrow" style={{ color: maint.data.overdue.length ? 'var(--red)' : 'var(--em-hi)' }}>
+                Maintenance
+              </div>
+              <div style={{ fontSize: 15, color: 'var(--white)', marginTop: 6 }}>
+                {maint.data.overdue.length > 0 && (
+                  <><b className="mono">{maint.data.overdue.length}</b> behind{maint.data.dueToday.length > 0 ? ', ' : ''}</>
+                )}
+                {maint.data.dueToday.length > 0 && (<><b className="mono">{maint.data.dueToday.length}</b> due today</>)}
+              </div>
+              <div style={{ fontSize: 12.5, color: 'var(--mute)', marginTop: 4 }}>
+                {maint.data.overdue[0]
+                  ? `Longest wait: ${maint.data.overdue[0].projectName} · ${maint.data.overdue[0].daysLate}d`
+                  : maint.data.dueToday.map((r) => r.projectName).slice(0, 3).join(' · ')}
+              </div>
+            </div>
+            <span className="btn btn-s sm">Open the board</span>
+          </Link>
+        )}
 
         <div className="note mute" style={{ marginBottom: 22, display: 'flex', gap: 11, alignItems: 'flex-start' }}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--em)" strokeWidth="2" style={{ flexShrink: 0, marginTop: 1 }}>

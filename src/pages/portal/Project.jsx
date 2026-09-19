@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useApi } from '../../lib/useApi'
-import { EP, STAGES, STAGE_META, STAGE_STATUS, DEVELOPER_NAME, adaptProjects, adaptProject } from '../../lib/endpoints'
+import { EP, STAGES, STAGE_META, STAGE_STATUS, DEVELOPER_NAME, adaptProjects, adaptProject, adaptMaintenanceReports } from '../../lib/endpoints'
 import { longDate } from '../../lib/format'
 import Prose, { extractAsks, firstLine } from '../../lib/markdown'
 import { TopBar } from '../../components/Shell'
@@ -26,6 +26,9 @@ export default function Project() {
   const detail = useApi(firstId ? EP.project(firstId) : null, { select: adaptProject })
   const p = detail.data || list?.items?.[0]
   const [openKey, setOpenKey] = useState(null)
+  // Completed maintenance reports. Deliberately no schedule and no next date —
+  // the client sees what was done, never what is owed.
+  const reports = useApi(firstId ? EP.maintenanceReports(firstId) : null, { select: adaptMaintenanceReports })
 
   if (loading || (firstId && detail.loading && !detail.data)) {
     return <><TopBar crumbs={[{ label: 'Project' }]} /><div className="wrap"><Loading full /></div></>
@@ -123,6 +126,19 @@ export default function Project() {
                         </div>
                       )}
                     </div>
+                    {key === 'MAINTENANCE' && (reports.data || []).length > 0 && (
+                      <div className="mv-reports">
+                        <div className="eyebrow" style={{ marginBottom: 10 }}>What we've done</div>
+                        {(reports.data || []).map((r) => (
+                          <div key={r.id} className="mv-report">
+                            <div className="byline">
+                              <span><b>{r.by || developer}</b> · {longDate(r.completedAt)}</span>
+                            </div>
+                            <Prose source={r.report} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <StageThread projectId={p.id} stageKey={key} counterpart={developer} />
                   </>
                 ) : (
